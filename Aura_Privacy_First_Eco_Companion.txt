@@ -1,0 +1,99 @@
+Aura: The Privacy-First Eco-Companion
+======================================
+
+THE ELEVATOR PITCH
+------------------
+Aura is a gamified, privacy-preserving mobile web app that turns daily sustainable habits
+into tangible, on-chain rewards. It solves the biggest friction point in consumer
+sustainability apps: users want the dopamine hit of maintaining a streak and nurturing a
+digital pet, but they refuse to dox their location, shopping habits, or utility data to a
+public ledger. Aura bridges this gap using intelligent off-chain agents and Hedera's
+high-throughput network.
+
+
+THE CORE MECHANISMS
+-------------------
+
+1. The Eco-Gotchi (Dynamic NFT)
+   Every user receives an "Aura Spirit," a dynamic NFT whose metadata and visual state
+   evolve strictly based on the user's real-world "green streak."
+
+2. Zero-Knowledge Data Ingestion
+   Users connect data sources (transit APIs, smart plugs, digital receipts). Local AI
+   agents process this data on-device to verify the action, ensuring raw Personal
+   Identifiable Information (PII) never leaves the user's hardware.
+
+3. The Local Green Economy
+   Maintaining a streak yields fractional utility tokens that can be redeemed for discounts
+   at partnered local eco-businesses (cafes, thrift stores, zero-waste shops), creating a
+   localized B2C micro-economy.
+
+
+THE OVERALL TECHNICAL ARCHITECTURE
+-----------------------------------
+The architecture is split into three main layers: the Frontend, the Off-Chain AI/Privacy
+Layer, and the Hedera On-Chain Layer.
+
+
+1. THE FRONTEND (CLIENT LAYER)
+------------------------------
+- Framework: A responsive, mobile-first React web application. It needs to feel like a
+  polished Web2 consumer app, abstracting the blockchain away.
+
+- Wallet Integration: HashPack or Blade Wallet integration for seamless Hedera onboarding.
+
+- UI Components: A dashboard displaying the dynamic pet, a streak counter, and a
+  map/marketplace of local business partners where tokens can be spent.
+
+
+2. THE OFF-CHAIN AI & PRIVACY LAYER (THE BRAIN)
+------------------------------------------------
+This is where the AI Agent bounty is hit and user privacy is protected.
+
+- MCP Servers (Model Context Protocol): Use MCP servers as the bridge to securely fetch
+  data from external APIs (e.g., pulling a transit ticket validation or reading a smart
+  thermostat API).
+
+- Local LLMs & Agents: Once the MCP server grabs the raw data (like an unstructured
+  digital receipt from a local vegan cafe), a local LLM parses it to verify it meets the
+  "green action" criteria. Because the LLM is local, the user's raw shopping data isn't
+  broadcast to OpenAI or the public.
+
+- The Privacy Filter: Once the local agent verifies the action, it generates a
+  cryptographic proof (or an anonymized hash). It effectively says, "Wallet X completed a
+  valid action of Category Y at Timestamp Z," without revealing the "Where" or "What
+  exactly."
+
+
+3. THE HEDERA ON-CHAIN LAYER (THE ENGINE)
+------------------------------------------
+The anonymized proof is sent from the local agent to the Hedera network.
+
+- Hedera Consensus Service (HCS): The anonymous proof is logged to HCS. This creates an
+  immutable, timestamped audit trail of the user's verified actions, preventing users from
+  cheating their streaks while maintaining a privacy suite for their data.
+
+- Hedera Token Service (HTS) - NFTs: HTS is used to manage the Aura Spirit (the pet). A
+  smart contract listens for verified HCS events. If a streak milestone is hit, the
+  contract dynamically updates the metadata of the HTS token, evolving the pet's visual
+  traits.
+
+- Hedera Token Service (HTS) - Fungible Tokens: The same contract triggers HTS to mint
+  and distribute fractional reward tokens ($AURA) to the user's wallet, which they can
+  later transfer to partnered merchants.
+
+
+WHY THIS ARCHITECTURE WINS
+---------------------------
+
+- Hits Multiple Bounties: It dominates the Sustainability track by creating a real-world
+  incentive structure, and it perfectly captures the AI Agent bounty by utilizing MCP
+  servers and local LLMs for secure, intelligent data ingestion.
+
+- Solves a Real Trilemma: It balances Gamification, Verification, and Privacy. Most
+  projects fail because they sacrifice privacy to get verification.
+
+- Leverages Hedera's Strengths: The architecture fundamentally relies on Hedera's low,
+  predictable fees. Updating dynamic NFT metadata and micro-distributing reward tokens
+  daily for thousands of users would bankrupt a project on Ethereum, but is trivial
+  on Hedera.
