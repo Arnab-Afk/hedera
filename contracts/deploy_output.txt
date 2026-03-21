@@ -1,0 +1,15 @@
+
+Deploying Wisp contracts to Hedera Testnet
+Deployer: 0x41e42eD3455eff2a06441B93EF8b1C1888FA2882
+
+1/3 Deploying WispToken...
+ProviderError: [Request ID: 39653b03-5b64-4237-8294-384be22eb4a2] Error occurred during transaction simulation: INSUFFICIENT_TX_FEE
+    at HttpProvider.request (E:\projects\hedera\contracts\node_modules\hardhat\src\internal\core\providers\http.ts:116:21)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at HardhatEthersProvider.estimateGas (E:\projects\hedera\contracts\node_modules\@nomicfoundation\hardhat-ethers\src\internal\hardhat-ethers-provider.ts:246:27)
+    at E:\projects\hedera\contracts\node_modules\@nomicfoundation\hardhat-ethers\src\signers.ts:339:35
+    at async Promise.all (index 0)
+    at HardhatEthersSigner._sendUncheckedTransaction (E:\projects\hedera\contracts\node_modules\@nomicfoundation\hardhat-ethers\src\signers.ts:360:7)
+    at HardhatEthersSigner.sendTransaction (E:\projects\hedera\contracts\node_modules\@nomicfoundation\hardhat-ethers\src\signers.ts:185:18)
+    at ContractFactory.deploy (E:\projects\hedera\contracts\node_modules\ethers\src.ts\contract\factory.ts:111:24)
+    at main (E:\projects\hedera\contracts\scripts\deploy.js:22:21)

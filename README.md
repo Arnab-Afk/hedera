@@ -7,7 +7,7 @@
 ### *The Privacy-First Eco-Companion*
 
 [![Hedera](https://img.shields.io/badge/Powered%20by-Hedera-3a3a8c?style=for-the-badge&logo=hedera)](https://hedera.com)
-[![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPL--3.0-22c55e?style=for-the-badge)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-a3e635?style=for-the-badge)](CONTRIBUTING.md)
 [![React](https://img.shields.io/badge/React-Frontend-61dafb?style=for-the-badge&logo=react)](https://react.dev)
 [![Built at](https://img.shields.io/badge/Built%20at-Hackathon-f59e0b?style=for-the-badge)](#)
@@ -522,7 +522,7 @@ For bugs and feature requests, please use the [issues page](#).
 
 ## 📄 License
 
-Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
+Distributed under the GNU General Public License v3.0. See [`LICENSE`](LICENSE) for more information.
 
 ---
 

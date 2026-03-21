@@ -1,35 +1,25 @@
 require('dotenv').config();
+require('@nomicfoundation/hardhat-toolbox');
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
-    version: '0.8.24',
+    version: '0.8.28',
     settings: {
       optimizer: { enabled: true, runs: 200 },
+      evmVersion: 'paris',
     },
   },
   networks: {
-    // Local Hardhat node for rapid iteration
-    localhost: {
-      url: 'http://127.0.0.1:8545',
-    },
-    // Hedera Testnet (JSON-RPC relay)
     hedera_testnet: {
-      url: 'https://testnet.hashio.io/api',
+      url: process.env.HEDERA_RPC_URL || 'https://testnet.hashio.io/api',
       chainId: 296,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+      accounts: process.env.HEDERA_PRIVATE_KEY ? [process.env.HEDERA_PRIVATE_KEY] : [],
     },
-    // Hedera Mainnet
     hedera_mainnet: {
       url: 'https://mainnet.hashio.io/api',
       chainId: 295,
-      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+      accounts: process.env.HEDERA_PRIVATE_KEY ? [process.env.HEDERA_PRIVATE_KEY] : [],
     },
-  },
-  paths: {
-    sources:   './contracts',
-    tests:     './test',
-    cache:     './cache',
-    artifacts: './artifacts',
   },
 };

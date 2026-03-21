@@ -1,16 +1,15 @@
 {
   "name": "wisp-contracts",
   "version": "1.0.0",
-  "description": "Wisp smart contracts — Hedera / EVM compatible",
+  "description": "Wisp smart contracts — Hedera EVM compatible",
   "scripts": {
-    "compile":  "hardhat compile",
-    "test":     "hardhat test",
-    "deploy":   "hardhat run scripts/deploy.js --network hedera_testnet",
-    "deploy:local": "hardhat run scripts/deploy.js --network localhost"
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.js --network hedera_testnet",
+    "clean": "hardhat clean"
   },
   "dependencies": {
-    "@hashgraph/sdk": "^2.50.0",
-    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts": "^4.9.6",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {

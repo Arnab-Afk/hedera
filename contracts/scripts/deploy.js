@@ -1,75 +1,56 @@
 require('dotenv').config();
-const hre = require('hardhat');
+const { ethers } = require('hardhat');
 
-/**
- * Deployment script for all Wisp contracts.
- *
- * Order:
- *  1. WispToken   (needs team/merchant/community wallet addresses)
- *  2. WispSpirit  (needs IPFS URIs for each evolution stage)
- *  3. WispCore    (needs WispSpirit + WispToken addresses)
- *  4. Wire up:    set WispCore address in both WispToken and WispSpirit
- */
+const STAGE_URIS = [
+  'ipfs://bafybeigm3dpouilek7amswqbycy4qn4aiu4sapnbskigodp3q64cukijl4',
+  'ipfs://bafybeidm4lstvivibu75whhokzn7hyb7eixq5kqzwrvstwvmml4k5tyefm',
+  'ipfs://bafybeialy5a5shv5b2blzj6fuconrsgz3j7tdpm63h72oxsrcxvdlcruem',
+  'ipfs://bafybeiguold6werevhsh3easeezsyxntufwlzvmskmf5tkn5zbxaz2ggaa',
+  'ipfs://bafybeiarl5uk3rt37xmsmlyldiatga6t4vspepzgdaultpgf7iflqorb5m',
+  'ipfs://bafybeid4iubzem4tarjne4u3imygvydojf4jzyucprt7bspbcf4qhce5zi',
+  'ipfs://bafybeifc7wwasib5we7zxijzvdsogfye3jukbyfqyrtgac7pa26slld4za',
+];
+
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
-  console.log(`\n🌿 Deploying Wisp contracts`);
-  console.log(`   Deployer: ${deployer.address}`);
-  console.log(`   Network:  ${hre.network.name}`);
-  console.log(`   Balance:  ${hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address))} HBAR\n`);
+  const [deployer] = await ethers.getSigners();
 
-  // ── 1. WispToken ───────────────────────────────────────────────────────────
-  console.log('1️⃣  Deploying WispToken...');
-  const WispToken = await hre.ethers.getContractFactory('WispToken');
-  const wispToken = await WispToken.deploy(
-    deployer.address, // team wallet (use real multisig in production)
-    deployer.address, // merchant wallet
-    deployer.address  // community wallet
-  );
+  console.log('\nDeploying Wisp contracts to Hedera Testnet');
+  console.log(`Deployer: ${deployer.address}\n`);
+
+  console.log('1/3 Deploying WispToken...');
+  const WispToken = await ethers.getContractFactory('WispToken');
+  const wispToken = await WispToken.deploy(deployer.address, deployer.address, deployer.address);
   await wispToken.waitForDeployment();
-  console.log(`   ✅ WispToken: ${await wispToken.getAddress()}`);
+  const wispTokenAddress = await wispToken.getAddress();
+  console.log(`WispToken deployed: ${wispTokenAddress}`);
 
-  // ── 2. WispSpirit ──────────────────────────────────────────────────────────
-  // Replace these placeholder IPFS CIDs with real ones after uploading metadata
-  const stageURIs = [
-    'ipfs://QmPlaceholderStage0/metadata.json', // Seedling
-    'ipfs://QmPlaceholderStage1/metadata.json', // Sprout
-    'ipfs://QmPlaceholderStage2/metadata.json', // Sapling
-    'ipfs://QmPlaceholderStage3/metadata.json', // Grove
-    'ipfs://QmPlaceholderStage4/metadata.json', // Ancient
-    'ipfs://QmPlaceholderStage5/metadata.json', // Elder
-    'ipfs://QmPlaceholderStage6/metadata.json', // Legendary
-  ];
-
-  console.log('\n2️⃣  Deploying WispSpirit...');
-  const WispSpirit = await hre.ethers.getContractFactory('WispSpirit');
-  const wispSpirit = await WispSpirit.deploy(stageURIs);
+  console.log('\n2/3 Deploying WispSpirit...');
+  const WispSpirit = await ethers.getContractFactory('WispSpirit');
+  const wispSpirit = await WispSpirit.deploy(STAGE_URIS);
   await wispSpirit.waitForDeployment();
-  console.log(`   ✅ WispSpirit: ${await wispSpirit.getAddress()}`);
+  const wispSpiritAddress = await wispSpirit.getAddress();
+  console.log(`WispSpirit deployed: ${wispSpiritAddress}`);
 
-  // ── 3. WispCore ───────────────────────────────────────────────────────────
-  console.log('\n3️⃣  Deploying WispCore...');
-  const WispCore = await hre.ethers.getContractFactory('WispCore');
-  const wispCore = await WispCore.deploy(
-    await wispSpirit.getAddress(),
-    await wispToken.getAddress()
-  );
+  console.log('\n3/3 Deploying WispCore...');
+  const WispCore = await ethers.getContractFactory('WispCore');
+  const wispCore = await WispCore.deploy(wispSpiritAddress, wispTokenAddress);
   await wispCore.waitForDeployment();
-  console.log(`   ✅ WispCore: ${await wispCore.getAddress()}`);
+  const wispCoreAddress = await wispCore.getAddress();
+  console.log(`WispCore deployed: ${wispCoreAddress}`);
 
-  // ── 4. Wire up permissions ────────────────────────────────────────────────
-  console.log('\n4️⃣  Wiring up contract permissions...');
-  await (await wispToken.setWispCore(await wispCore.getAddress())).wait();
-  await (await wispSpirit.setWispCore(await wispCore.getAddress())).wait();
-  console.log('   ✅ WispCore set as minter on WispToken');
-  console.log('   ✅ WispCore set as evolver on WispSpirit');
+  console.log('\nWiring permissions...');
+  await (await wispToken.setWispCore(wispCoreAddress)).wait();
+  console.log('WispCore set as minter on WispToken');
+  await (await wispSpirit.setWispCore(wispCoreAddress)).wait();
+  console.log('WispCore set as evolver on WispSpirit');
 
-  // ── Summary ───────────────────────────────────────────────────────────────
-  console.log('\n─────────────────────────────────────────────');
-  console.log('🚀 Deployment complete! Add these to your .env:');
-  console.log(`WISP_CORE_ADDRESS=${await wispCore.getAddress()}`);
-  console.log(`WISP_SPIRIT_ADDRESS=${await wispSpirit.getAddress()}`);
-  console.log(`WISP_TOKEN_ADDRESS=${await wispToken.getAddress()}`);
-  console.log('─────────────────────────────────────────────\n');
+  console.log('\n--- Copy these to backend/.env ---');
+  console.log(`WISP_CORE_ADDRESS=${wispCoreAddress}`);
+  console.log(`WISP_SPIRIT_ADDRESS=${wispSpiritAddress}`);
+  console.log(`WISP_TOKEN_ADDRESS=${wispTokenAddress}`);
+  console.log(`\nhttps://hashscan.io/testnet/contract/${wispCoreAddress}`);
+  console.log(`https://hashscan.io/testnet/contract/${wispSpiritAddress}`);
+  console.log(`https://hashscan.io/testnet/contract/${wispTokenAddress}`);
 }
 
 main().catch((err) => {
