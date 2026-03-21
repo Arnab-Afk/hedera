@@ -6,36 +6,29 @@ import { GreenActionLLM } from './llm/client.js';
 import { PrivacyFilter }  from './privacy-filter/proofGenerator.js';
 import { HCSClient }      from './hedera/hcsClient.js';
 
-/**
- * Wisp Agent Orchestrator
- *
- * Entry point for the off-chain AI & Privacy Layer.
- * Coordinates: MCP fetch → LLM verification → Privacy filter → HCS submission.
- *
- * In production, this runs as a background daemon on the user's device,
- * polling integrations daily and submitting one proof per verified action.
- */
+// Track submitted proof hashes within the current calendar day to prevent duplicates
+const submittedTodayHashes = new Set();
 
-async function main() {
-  console.log('🌿 Wisp Agent starting...');
-  console.log(`   Network: ${process.env.HEDERA_NETWORK}`);
-  console.log(`   LLM model: ${process.env.LLM_MODEL}`);
+// ── Retry helper (exponential backoff) ───────────────────────────────────────
+async function withRetry(fn, label, maxAttempts = 3) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      const delayMs = 1000 * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+      console.warn(`   ⚠️  ${label} failed (attempt ${attempt}/${maxAttempts}) — retrying in ${delayMs}ms: ${err.message}`);
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+}
 
-  const llm    = new GreenActionLLM();
-  const filter = new PrivacyFilter();
-  const hcs    = new HCSClient();
+async function runCycle(llm, filter, hcs, mcpServers) {
+  console.log(`\n🔄 [${new Date().toISOString()}] Agent cycle starting...`);
 
-  // ── Register available MCP servers ───────────────────────────────────────
-  const mcpServers = [
-    new TransitMCP(),
-    new EnergyMCP(),
-    new ReceiptMCP(),
-  ];
+  const daySequence = await getDaySequence();
+  console.log(`   📅 Current day_sequence: ${daySequence}`);
 
-  await hcs.connect();
-  console.log(`✅ HCS client connected to topic: ${process.env.HCS_TOPIC_ID}\n`);
-
-  // ── Run each MCP server in sequence ──────────────────────────────────────
   for (const mcp of mcpServers) {
     console.log(`\n⏳ Running ${mcp.name} MCP server...`);
     try {
@@ -45,39 +38,58 @@ async function main() {
         continue;
       }
 
-      // LLM classification
       const verdict = await llm.classify(mcp.category, rawData);
       console.log(`   🤖 LLM verdict: ${verdict.isGreenAction ? '✅ GREEN' : '❌ NOT GREEN'} — ${verdict.reasoning}`);
-
       if (!verdict.isGreenAction) continue;
 
-      // Generate anonymized proof
       const proof = filter.generateProof({
         walletAddress: process.env.HEDERA_OPERATOR_ID,
         category:      mcp.category,
-        daySequence:   await getDaySequence(),
+        daySequence,
       });
 
-      // Submit to HCS
-      const receipt = await hcs.submitProof(proof);
+      if (submittedTodayHashes.has(proof.proofHash)) {
+        console.log(`   ⏩ Duplicate proof for ${mcp.category} — skipping.`);
+        continue;
+      }
+
+      // HCS submit with retry
+      const receipt = await withRetry(() => hcs.submitProof(proof), 'HCS submission');
       console.log(`   ⛓️  Proof submitted to HCS — sequence #${receipt.topicSequenceNumber}`);
 
-      // Notify backend
-      await notifyBackend(proof, receipt);
+      // Backend notify with retry
+      await withRetry(() => notifyBackend(proof, receipt), 'Backend notification');
+      submittedTodayHashes.add(proof.proofHash);
       console.log(`   ✅ Backend notified — $WISP reward queued`);
 
     } catch (err) {
-      console.error(`   ❌ ${mcp.name} failed:`, err.message);
+      console.error(`   ❌ ${mcp.name} failed after all retries:`, err.message);
     }
   }
 
-  console.log('\n🌿 Agent cycle complete. Shutting down.\n');
-  process.exit(0);
+  // Reset deduplication set at midnight
+  const now = new Date();
+  const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
+  setTimeout(() => submittedTodayHashes.clear(), msUntilMidnight);
+
+  console.log(`\n🌿 Cycle complete.`);
 }
 
 async function getDaySequence() {
-  // In production, fetch current streak from the backend to get accurate day sequence
-  return 1; // Placeholder
+  try {
+    const res = await fetch(`${process.env.WISP_API_URL}/streaks/me`, {
+      headers: { 'Authorization': `Bearer ${process.env.WISP_API_KEY}` },
+    });
+    if (!res.ok) {
+      console.warn(`   ⚠️  Could not fetch streak (HTTP ${res.status}), defaulting to 1`);
+      return 1;
+    }
+    const data = await res.json();
+    return (data?.streak?.current_streak ?? 0) + 1;
+  } catch (err) {
+    console.warn(`   ⚠️  getDaySequence error: ${err.message} — defaulting to 1`);
+    return 1;
+  }
 }
 
 async function notifyBackend(proof, receipt) {
@@ -88,14 +100,43 @@ async function notifyBackend(proof, receipt) {
       'Authorization': `Bearer ${process.env.WISP_API_KEY}`,
     },
     body: JSON.stringify({
-      category:           proof.actionCategory,
-      proofHash:          proof.proofHash,
-      daySequence:        proof.daySequence,
-      hcsTopicId:         process.env.HCS_TOPIC_ID,
-      hcsSequenceNumber:  receipt.topicSequenceNumber?.toString(),
+      category:          proof.actionCategory,
+      proofHash:         proof.proofHash,
+      daySequence:       proof.daySequence,
+      hcsTopicId:        process.env.HCS_TOPIC_ID,
+      hcsSequenceNumber: receipt.topicSequenceNumber?.toString(),
     }),
   });
   if (!res.ok) throw new Error(`Backend notification failed: ${res.status}`);
+}
+
+async function main() {
+  console.log('🌿 Wisp Agent starting...');
+  console.log(`   Network:       ${process.env.HEDERA_NETWORK}`);
+  console.log(`   LLM model:     ${process.env.LLM_MODEL}`);
+  console.log(`   Poll interval: ${process.env.POLL_INTERVAL_MS ?? 300_000}ms`);
+
+  const llm    = new GreenActionLLM();
+  const filter = new PrivacyFilter();
+  const hcs    = new HCSClient();
+  const mcpServers = [new TransitMCP(), new EnergyMCP(), new ReceiptMCP()];
+
+  await hcs.connect();
+  console.log(`✅ HCS client connected to topic: ${process.env.HCS_TOPIC_ID}\n`);
+
+  await runCycle(llm, filter, hcs, mcpServers);
+
+  const intervalMs = parseInt(process.env.POLL_INTERVAL_MS ?? '300000', 10);
+  const timer = setInterval(() => runCycle(llm, filter, hcs, mcpServers), intervalMs);
+
+  const shutdown = () => {
+    console.log('\n🛑 Wisp Agent shutting down gracefully...');
+    clearInterval(timer);
+    hcs.disconnect?.();
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 main().catch((err) => {
