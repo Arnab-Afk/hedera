@@ -1,23 +1,21 @@
-const { Router } = require('express');
-const { body } = require('express-validator');
-const { validate } = require('../middleware/validate');
+const { Router }  = require('express');
+const { body }    = require('express-validator');
+const { validate }    = require('../middleware/validate');
 const { authenticate } = require('../middleware/auth');
-const {
-  submitAction,
-  getActions,
-  getActionById,
-} = require('../controllers/actionsController');
+const { actionsLimiter } = require('../middleware/rateLimiter');
+const { submitAction, getActions, getActionById } = require('../controllers/actionsController');
 
 const router = Router();
 
 /**
  * POST /api/actions
  * Submit an anonymized proof of a green action from the local agent.
- * Body: { walletAddress, category, proofHash, daySequence, hcsTopicId }
+ * Body: { category, proofHash, daySequence, hcsTopicId, hcsSequenceNumber }
  */
 router.post(
   '/',
   authenticate,
+  actionsLimiter,
   [
     body('category').notEmpty().withMessage('category is required'),
     body('proofHash').notEmpty().withMessage('proofHash is required'),

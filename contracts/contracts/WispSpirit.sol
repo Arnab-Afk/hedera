@@ -40,7 +40,7 @@ contract WispSpirit is ERC721, Ownable {
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
-    constructor(string[7] memory _stageBaseURIs) ERC721("Wisp Spirit", "WSPRТ") Ownable(msg.sender) {
+    constructor(string[7] memory _stageBaseURIs) ERC721("Wisp Spirit", "WSPRT") Ownable(msg.sender) {
         stageBaseURIs = _stageBaseURIs;
     }
 
@@ -90,7 +90,7 @@ contract WispSpirit is ERC721, Ownable {
     // ── Soulbound (non-transferable) ──────────────────────────────────────────
 
     function transferFrom(address, address, uint256) public pure override {
-        revert("WispSpirit: Soulbound — non-transferable");
+        revert("WispSpirit: Soulbound - non-transferable");
     }
 
     // ── Metadata ──────────────────────────────────────────────────────────────
