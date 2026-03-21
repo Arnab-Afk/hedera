@@ -1,14 +1,28 @@
 const { Router } = require('express');
-const { body } = require('express-validator');
-const { validate } = require('../middleware/validate');
-const { register, login, me } = require('../controllers/authController');
+const { body, query: qv } = require('express-validator');
+const { validate }   = require('../middleware/validate');
+const { register, login, me, getChallenge } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
+const { authLimiter }  = require('../middleware/rateLimiter');
 
 const router = Router();
 
+// Apply auth-specific rate limit to ALL auth routes
+router.use(authLimiter);
+
+/**
+ * GET /api/auth/challenge?walletAddress=0.0.xxxxx
+ * Returns a one-time nonce for the wallet to sign.
+ */
+router.get(
+  '/challenge',
+  [qv('walletAddress').notEmpty().withMessage('walletAddress query param is required')],
+  validate,
+  getChallenge
+);
+
 /**
  * POST /api/auth/register
- * Register a new user with their Hedera wallet address.
  */
 router.post(
   '/register',
@@ -19,8 +33,7 @@ router.post(
 
 /**
  * POST /api/auth/login
- * Login using wallet address + signed challenge (signature verification).
- * Returns a JWT for subsequent authenticated requests.
+ * Body: { walletAddress, signature }
  */
 router.post(
   '/login',
@@ -34,7 +47,6 @@ router.post(
 
 /**
  * GET /api/auth/me
- * Returns the currently authenticated user's profile.
  */
 router.get('/me', authenticate, me);
 

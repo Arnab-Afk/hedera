@@ -17,7 +17,7 @@ contract WispToken is ERC20, Ownable {
 
     event RewardMinted(address indexed to, uint256 amount);
 
-    constructor(address teamWallet, address merchantWallet, address communityWallet) ERC20("Wisp Token", "WISP") {
+    constructor(address teamWallet, address merchantWallet, address communityWallet) ERC20("Wisp Token", "WISP") Ownable(msg.sender) {
         _mint(teamWallet, TEAM_ALLOCATION);
         _mint(merchantWallet, MERCHANT_ALLOCATION);
         _mint(communityWallet, COMMUNITY_ALLOCATION);

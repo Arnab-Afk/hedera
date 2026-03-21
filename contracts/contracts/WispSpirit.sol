@@ -18,7 +18,7 @@ contract WispSpirit is ERC721, Ownable {
     string[7] public stageBaseURIs;
     address public wispCore;
 
-    constructor(string[7] memory _stageBaseURIs) ERC721("Wisp Spirit", "WSPRT") {
+    constructor(string[7] memory _stageBaseURIs) ERC721("Wisp Spirit", "WSPRT") Ownable(msg.sender) {
         stageBaseURIs = _stageBaseURIs;
     }
 
@@ -44,12 +44,16 @@ contract WispSpirit is ERC721, Ownable {
         emit SpiritEvolved(tokenId, stage, newUri);
     }
 
-    function _transfer(address, address, uint256) internal pure override {
-        revert("WispSpirit: Soulbound");
+    // Soulbound: block all transfers by overriding _update (OZ v5 hook)
+    function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
+        address from = _ownerOf(tokenId);
+        // Allow minting (from == address(0)) but block all transfers
+        require(from == address(0), "WispSpirit: Soulbound - non-transferable");
+        return super._update(to, tokenId, auth);
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(_exists(tokenId), "WispSpirit: nonexistent token");
+        _requireOwned(tokenId);
         return _tokenURIs[tokenId];
     }
 

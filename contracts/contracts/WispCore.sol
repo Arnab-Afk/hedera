@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 interface IWispSpirit {
     function evolve(address user, uint8 stage) external;
@@ -35,7 +35,7 @@ contract WispCore is Ownable, ReentrancyGuard {
     uint256 public constant BASE_REWARD = 1e8;
     uint32[] public milestones = [7, 14, 30, 60, 90, 180, 365];
 
-    constructor(address spiritAddress, address tokenAddress) {
+    constructor(address spiritAddress, address tokenAddress) Ownable(msg.sender) {
         wispSpirit = IWispSpirit(spiritAddress);
         wispToken = IWispToken(tokenAddress);
     }
