@@ -7,7 +7,8 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "db:migrate": "node src/db/migrate.js",
-    "db:seed": "node src/db/seed.js"
+    "db:seed": "node src/db/seed.js",
+    "hedera:setup": "node scripts/setup-hedera.js"
   },
   "dependencies": {
     "@hashgraph/sdk": "^2.50.0",
