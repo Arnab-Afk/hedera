@@ -8,6 +8,7 @@ const routes  = require('./routes');
 const { globalLimiter } = require('./middleware/rateLimiter');
 
 const app  = express();
+app.set('trust proxy', 1); // Trust the first proxy to fix express-rate-limit X-Forwarded-For errors
 const PORT = process.env.PORT || 3001;
 
 // ── Middleware ───────────────────────────────────────────────────────────────
