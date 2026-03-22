@@ -528,6 +528,6 @@ Distributed under the GNU General Public License v3.0. See [`LICENSE`](LICENSE) 
 
 <div align="center">
 
-Built with 💚 for a greener future · Powered by [Hedera](https://hedera.com)
+Built with 💚 by Team Big(O) for a greener future · Powered by [Hedera](https://hedera.com)
 
 </div>
