@@ -24,6 +24,7 @@ function getXpToNextLevel(experience) {
 const CATEGORY_XP = {
   'public_transit': 50,
   'energy_reduction': 100,
+  'screen_time_reduction': 80,
   'recycling': 30,
   'water_conservation': 40,
   'sustainable_purchase': 60

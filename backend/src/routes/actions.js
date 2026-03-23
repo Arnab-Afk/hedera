@@ -8,6 +8,7 @@ const {
   submitTicketPhotoAction,
   submitManualAction,
   submitElectricityBillAction,
+  submitScreenTimeAction,
   getActions,
   getActionById,
 } = require('../controllers/actionsController');
@@ -65,6 +66,25 @@ router.post(
   ],
   validate,
   submitElectricityBillAction
+);
+
+/**
+ * POST /api/actions/screen-time
+ * Extract total daily screen-time from screenshot and reward low usage.
+ */
+router.post(
+  '/screen-time',
+  authenticate,
+  actionsLimiter,
+  [
+    body('imageDataUrl')
+      .isString()
+      .withMessage('imageDataUrl must be a string')
+      .isLength({ min: 100 })
+      .withMessage('imageDataUrl appears too small to be a valid image data URL'),
+  ],
+  validate,
+  submitScreenTimeAction
 );
 
 /**

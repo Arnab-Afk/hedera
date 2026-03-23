@@ -11,6 +11,7 @@ const BASE_REWARD = 1.0; // $WISP
 const CATEGORY_MULTIPLIERS = {
   public_transit:    1.5,
   energy_reduction:  1.3,
+  screen_time_reduction: 1.15,
   plant_based_food:  1.2,
   thrift_purchase:   1.1,
   carbon_offset:     1.5,
