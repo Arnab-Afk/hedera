@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import SplashScreen from "./splash-screen";
 import WelcomeSlides from "./welcome-slides";
+import LoginScreen from "./login-screen";
 import NameYourSpirit from "./name-your-spirit";
 import MoodCheckIn from "./mood-check-in";
 
-export type OnboardingStep = "splash" | "slides" | "name" | "mood";
+export type OnboardingStep = "splash" | "slides" | "login" | "name" | "mood";
 
 export default function OnboardingFlow() {
   const [step, setStep] = useState<OnboardingStep>("splash");
@@ -21,7 +22,9 @@ export default function OnboardingFlow() {
   };
 
   if (step === "splash") return <SplashScreen onDone={() => goTo("slides")} />;
-  if (step === "slides") return <WelcomeSlides onDone={() => goTo("name")} />;
+  if (step === "slides") return <WelcomeSlides onDone={() => goTo("login")} />;
+  if (step === "login") return <LoginScreen onDone={() => goTo("name")} />;
+  
   if (step === "name")
     return (
       <NameYourSpirit
