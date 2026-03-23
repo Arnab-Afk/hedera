@@ -9,7 +9,7 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "Wisp — The Privacy-First Eco-Companion",
+  title: "Wisp - The Privacy-First Eco-Companion",
   description: "Grow your Wisp Spirit and earn $WISP tokens by building daily eco-habits.",
   manifest: "/manifest.json",
 };
