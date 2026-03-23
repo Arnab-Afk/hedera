@@ -6,6 +6,9 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   wallet_address  TEXT NOT NULL UNIQUE,   -- Hedera account id e.g. 0.0.12345
+  email           TEXT UNIQUE,            -- For social logins
+  auth_type       TEXT NOT NULL DEFAULT 'wallet', -- 'wallet' or 'google'
+  social_id       TEXT UNIQUE,            -- Provider's unique ID
   nft_token_id    TEXT,                   -- HTS NFT token id for their Wisp Spirit
   nft_serial      BIGINT,                 -- NFT serial number
   spirit_name     TEXT,                   -- Custom name for the NFT pet
