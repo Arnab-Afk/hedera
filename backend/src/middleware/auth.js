@@ -8,6 +8,17 @@ async function authenticate(req, res, next) {
   }
 
   const token = authHeader.slice(7);
+
+  // ── Hackathon Demo Bypass: Internal Agent Key ─────────────────────────────
+  // Allows the off-chain agents to submit proofs without a dynamic user JWT
+  if (process.env.INTERNAL_AGENT_KEY && token === process.env.INTERNAL_AGENT_KEY) {
+    // For the demo, we'll associate agent-submitted actions with a default user
+    // if no specific wallet is provided, or we'll look up the user by wallet later.
+    // Here we just set a flag to indicate it's an agent request.
+    req.isAgent = true;
+    return next();
+  }
+
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
 

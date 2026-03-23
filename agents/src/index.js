@@ -77,7 +77,8 @@ async function runCycle(llm, filter, hcs, mcpServers) {
 
 async function getDaySequence() {
   try {
-    const res = await fetch(`${process.env.WISP_API_URL}/streaks/me`, {
+    const walletAddress = process.env.HEDERA_OPERATOR_ID;
+    const res = await fetch(`${process.env.WISP_API_URL}/streaks/me?walletAddress=${walletAddress}`, {
       headers: { 'Authorization': `Bearer ${process.env.WISP_API_KEY}` },
     });
     if (!res.ok) {
@@ -105,6 +106,7 @@ async function notifyBackend(proof, receipt) {
       daySequence:       proof.daySequence,
       hcsTopicId:        process.env.HCS_TOPIC_ID,
       hcsSequenceNumber: receipt.topicSequenceNumber?.toString(),
+      walletAddress:     proof.walletAddress, // Added for agent bypass identification
     }),
   });
   if (!res.ok) throw new Error(`Backend notification failed: ${res.status}`);
