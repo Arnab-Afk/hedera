@@ -7,6 +7,7 @@ const {
   submitAction,
   submitTicketPhotoAction,
   submitManualAction,
+  submitElectricityBillAction,
   getActions,
   getActionById,
 } = require('../controllers/actionsController');
@@ -45,6 +46,25 @@ router.post(
   ],
   validate,
   submitManualAction
+);
+
+/**
+ * POST /api/actions/electricity-bill
+ * Extract electricity units from uploaded monthly bill and reward by score.
+ */
+router.post(
+  '/electricity-bill',
+  authenticate,
+  actionsLimiter,
+  [
+    body('imageDataUrl')
+      .isString()
+      .withMessage('imageDataUrl must be a string')
+      .isLength({ min: 100 })
+      .withMessage('imageDataUrl appears too small to be a valid image data URL'),
+  ],
+  validate,
+  submitElectricityBillAction
 );
 
 /**

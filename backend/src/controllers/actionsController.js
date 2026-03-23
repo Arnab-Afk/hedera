@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { calculateWispReward } = require('../lib/rewards');
 const { getActionXp, calculateLevel, updateQuestProgress } = require('../lib/gameLogic');
 const { verifyTicketWithOpenRouter } = require('../lib/ticketPhotoVerifier');
+const { verifyElectricityBillWithAI } = require('../lib/electricityBillVerifier');
 
 /**
  * POST /api/actions
@@ -270,6 +271,112 @@ async function submitManualAction(req, res, next) {
 }
 
 /**
+ * POST /api/actions/electricity-bill
+ * Upload monthly electricity bill, extract consumed units with AI,
+ * derive a bill score, and credit rewards accordingly.
+ */
+async function submitElectricityBillAction(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { imageDataUrl } = req.body;
+
+    const bill = await verifyElectricityBillWithAI({ imageDataUrl });
+
+    if (!bill.isElectricityBill || bill.confidence < 0.4) {
+      return res.status(422).json({
+        error: 'Could not verify a valid electricity bill from the uploaded image',
+        verification: {
+          confidence: bill.confidence,
+          reasoning: bill.reasoning,
+        },
+      });
+    }
+
+    if (!bill.billingMonth || !bill.billingYear) {
+      return res.status(422).json({
+        error: 'Could not determine billing month/year from bill',
+        verification: {
+          unitsConsumed: bill.unitsConsumed,
+          confidence: bill.confidence,
+          reasoning: bill.reasoning,
+        },
+      });
+    }
+
+    const monthlyDup = await query(
+      `SELECT id
+       FROM actions
+       WHERE user_id = $1
+         AND category = 'energy_reduction'
+         AND proof_hash = $2
+       LIMIT 1`,
+      [userId, `bill:${bill.billingYear}:${bill.billingMonth.toLowerCase()}`]
+    );
+
+    if (monthlyDup.rows.length) {
+      return res.status(409).json({ error: 'This monthly bill was already submitted' });
+    }
+
+    const daySequence = await getDaySequenceForUser(userId);
+    const category = 'energy_reduction';
+    const proofHash = `bill:${bill.billingYear}:${bill.billingMonth.toLowerCase()}`;
+
+    const baseWisp = calculateWispReward(category, daySequence);
+    const scoreMultiplier = 0.5 + (bill.score / 100); // 0.7x to 1.5x range from score bands
+    const wispEarned = round8(baseWisp * scoreMultiplier);
+
+    const baseXp = getActionXp(category);
+    const xpEarned = baseXp + Math.round(bill.score / 10);
+
+    const actionInsert = await query(
+      `INSERT INTO actions
+         (user_id, category, proof_hash, hcs_topic_id, hcs_sequence_number, day_sequence, wisp_earned, xp_earned)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [userId, category, proofHash, null, null, daySequence, wispEarned, xpEarned]
+    );
+
+    const userUpdate = await query(
+      `UPDATE users
+       SET experience = experience + $1,
+           gold = gold + $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING experience, level`,
+      [xpEarned, wispEarned, userId]
+    );
+
+    const { experience, level: oldLevel } = userUpdate.rows[0];
+    const newLevel = calculateLevel(experience);
+    if (newLevel > oldLevel) {
+      await query('UPDATE users SET level = $1 WHERE id = $2', [newLevel, userId]);
+    }
+
+    await updateStreak(userId, daySequence, xpEarned);
+    await updateQuestProgress(query, userId, category);
+
+    return res.status(201).json({
+      action: actionInsert.rows[0],
+      reward: {
+        wispEarned,
+        xpEarned,
+      },
+      bill: {
+        unitsConsumed: bill.unitsConsumed,
+        billingMonth: bill.billingMonth,
+        billingYear: bill.billingYear,
+        score: bill.score,
+        confidence: bill.confidence,
+        reasoning: bill.reasoning,
+      },
+      levelUp: newLevel > oldLevel ? newLevel : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/actions
  */
 async function getActions(req, res, next) {
@@ -358,6 +465,7 @@ module.exports = {
   submitAction,
   submitTicketPhotoAction,
   submitManualAction,
+  submitElectricityBillAction,
   getActions,
   getActionById,
 };
