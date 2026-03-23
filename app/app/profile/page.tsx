@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import ThreeDPlant from "@/components/three-d-plant";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 
 interface GameProfile {
@@ -57,10 +58,11 @@ const connectedSourcesBase = [
 
 export default function ProfilePage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-  const { token, user } = useAuth();
+  const router = useRouter();
+  const { token, user, isLoading: isAuthLoading } = useAuth();
 
   const [copied, setCopied] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
   const [newSpiritName, setNewSpiritName] = useState("");
@@ -71,6 +73,12 @@ export default function ProfilePage() {
   const walletAddress = user?.wallet_address || "Not Connected";
 
   useEffect(() => {
+    if (!isAuthLoading && !token) {
+      router.replace("/onboarding");
+    }
+  }, [isAuthLoading, router, token]);
+
+  useEffect(() => {
     if (!token) {
       return;
     }
@@ -79,7 +87,7 @@ export default function ProfilePage() {
 
     const loadProfileData = async () => {
       try {
-        setIsLoading(true);
+        setIsProfileLoading(true);
         setStatusMessage("");
 
         const [profileRes, actionsRes, questsRes] = await Promise.all([
@@ -125,7 +133,7 @@ export default function ProfilePage() {
         }
       } finally {
         if (!cancelled) {
-          setIsLoading(false);
+          setIsProfileLoading(false);
         }
       }
     };
@@ -230,6 +238,10 @@ export default function ProfilePage() {
   ];
 
   const earnedAchievementCount = achievements.filter((a) => a.earned).length;
+
+  if (!token) {
+    return null;
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-900 font-sans p-4 sm:p-8 overflow-y-auto">
@@ -431,7 +443,7 @@ export default function ProfilePage() {
           </button>
 
           {statusMessage ? <p className="text-[11px] text-slate-500 font-semibold">{statusMessage}</p> : null}
-          {isLoading ? <p className="text-[11px] text-slate-400 font-semibold">Syncing profile...</p> : null}
+          {isProfileLoading ? <p className="text-[11px] text-slate-400 font-semibold">Syncing profile...</p> : null}
         </div>
 
         <div className="absolute bottom-0 w-full h-20 bg-white border-t border-slate-100 flex justify-around items-center px-6 pb-2 rounded-b-[2.5rem] shadow-[0_-10px_20px_rgba(0,0,0,0.03)] z-30">

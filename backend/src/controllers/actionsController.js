@@ -7,6 +7,7 @@ const { verifyElectricityBillWithAI } = require('../lib/electricityBillVerifier'
 const { verifyScreenTimeScreenshotWithAI } = require('../lib/screenTimeVerifier');
 const { verifyPlantMealWithAI } = require('../lib/plantMealVerifier');
 const { verifyRecyclingPhotoWithAI } = require('../lib/recyclingPhotoVerifier');
+const { verifyTimelineScreenshotWithAI, toLocalDateKey } = require('../lib/timelineVerifier');
 
 /**
  * POST /api/actions
@@ -659,6 +660,121 @@ async function submitRecyclingPhotoAction(req, res, next) {
 }
 
 /**
+ * POST /api/actions/timeline-screenshot
+ * Verify Google Maps Timeline screenshot and reward low-carbon commuting.
+ */
+async function submitTimelineScreenshotAction(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { imageDataUrl } = req.body;
+
+    const timeline = await verifyTimelineScreenshotWithAI({ imageDataUrl });
+
+    if (!timeline.isGoogleTimeline || timeline.confidence < 0.4) {
+      return res.status(422).json({
+        error: 'Could not verify a Google Maps Timeline screenshot',
+        verification: {
+          confidence: timeline.confidence,
+          reasoning: timeline.reasoning,
+        },
+      });
+    }
+
+    const today = toLocalDateKey(new Date());
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    const yesterday = toLocalDateKey(y);
+
+    if (!timeline.screenshotDate || ![today, yesterday].includes(timeline.screenshotDate)) {
+      return res.status(422).json({
+        error: `Screenshot date must be today (${today}) or yesterday (${yesterday})`,
+        verification: {
+          screenshotDate: timeline.screenshotDate,
+          confidence: timeline.confidence,
+          reasoning: timeline.reasoning,
+        },
+      });
+    }
+
+    const existingForDate = await query(
+      `SELECT id
+       FROM actions
+       WHERE user_id = $1
+         AND category = 'low_carbon_commute'
+         AND proof_hash = $2
+       LIMIT 1`,
+      [userId, `timeline:${timeline.screenshotDate}`]
+    );
+
+    if (existingForDate.rows.length) {
+      return res.status(409).json({ error: 'Timeline screenshot for this date was already submitted' });
+    }
+
+    const daySequence = await getDaySequenceForUser(userId);
+    const category = 'low_carbon_commute';
+    const proofHash = `timeline:${timeline.screenshotDate}`;
+
+    const tooHighEmission = timeline.actualEmissionKg > 6 || timeline.drivingKm > 20;
+    const baseWisp = calculateWispReward(category, daySequence);
+    const scoreMultiplier = 0.6 + (timeline.score / 100); // 0.6x to 1.6x
+
+    const wispEarned = tooHighEmission ? 0 : round8(baseWisp * scoreMultiplier);
+    const baseXp = getActionXp(category);
+    const xpEarned = tooHighEmission ? 0 : baseXp + Math.round(timeline.score / 8);
+
+    const actionInsert = await query(
+      `INSERT INTO actions
+         (user_id, category, proof_hash, hcs_topic_id, hcs_sequence_number, day_sequence, wisp_earned, xp_earned)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [userId, category, proofHash, null, null, daySequence, wispEarned, xpEarned]
+    );
+
+    const userUpdate = await query(
+      `UPDATE users
+       SET experience = experience + $1,
+           gold = gold + $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING experience, level`,
+      [xpEarned, wispEarned, userId]
+    );
+
+    const { experience, level: oldLevel } = userUpdate.rows[0];
+    const newLevel = calculateLevel(experience);
+    if (newLevel > oldLevel) {
+      await query('UPDATE users SET level = $1 WHERE id = $2', [newLevel, userId]);
+    }
+
+    await updateStreak(userId, daySequence, xpEarned);
+    await updateQuestProgress(query, userId, category);
+
+    return res.status(201).json({
+      action: actionInsert.rows[0],
+      reward: {
+        wispEarned,
+        xpEarned,
+      },
+      timeline: {
+        screenshotDate: timeline.screenshotDate,
+        totalSteps: timeline.totalSteps,
+        walkingKm: timeline.walkingKm,
+        transitKm: timeline.transitKm,
+        drivingKm: timeline.drivingKm,
+        actualEmissionKg: timeline.actualEmissionKg,
+        score: timeline.score,
+        tooHighEmission,
+        confidence: timeline.confidence,
+        reasoning: timeline.reasoning,
+      },
+      levelUp: newLevel > oldLevel ? newLevel : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/actions
  */
 async function getActions(req, res, next) {
@@ -751,6 +867,7 @@ module.exports = {
   submitScreenTimeAction,
   submitPlantMealAction,
   submitRecyclingPhotoAction,
+  submitTimelineScreenshotAction,
   getActions,
   getActionById,
 };

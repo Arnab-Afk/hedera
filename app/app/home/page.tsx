@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Leaf,
   Zap,
@@ -35,7 +36,8 @@ interface Task {
 
 export default function HomePage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-  const { token, user } = useAuth();
+  const router = useRouter();
+  const { token, user, isLoading } = useAuth();
   const [xp, setXp] = useState(10);
   const [level, setLevel] = useState(1);
   const [streak, setStreak] = useState(0);
@@ -61,6 +63,10 @@ export default function HomePage() {
   const [isSubmittingRecycle, setIsSubmittingRecycle] = useState(false);
   const [isRecycleSectionOpen, setIsRecycleSectionOpen] = useState(false);
   const [recycleStatus, setRecycleStatus] = useState<string>("");
+  const [timelinePreview, setTimelinePreview] = useState<string | null>(null);
+  const [isSubmittingTimeline, setIsSubmittingTimeline] = useState(false);
+  const [isTimelineSectionOpen, setIsTimelineSectionOpen] = useState(false);
+  const [timelineStatus, setTimelineStatus] = useState<string>("");
   const [verifyingCategory, setVerifyingCategory] = useState<string | null>(null);
   const [ticketStatus, setTicketStatus] = useState<string>("");
   const [wispBalance, setWispBalance] = useState(0);
@@ -116,9 +122,25 @@ export default function HomePage() {
       xp: 10,
       color: "bg-teal-500",
     },
+    {
+      id: 6,
+      category: "low_carbon_commute",
+      title: "Google Timeline Day",
+      subtitle: "Upload timeline screenshot",
+      icon: Train,
+      status: "actionable",
+      xp: 22,
+      color: "bg-cyan-500",
+    },
   ]);
 
   const effectiveWispBalance = useMemo(() => wispBalance + wispBalanceDelta, [wispBalance, wispBalanceDelta]);
+
+  useEffect(() => {
+    if (!isLoading && !token) {
+      router.replace("/onboarding");
+    }
+  }, [isLoading, router, token]);
 
   useEffect(() => {
     if (!user?.wallet_address) {
@@ -207,6 +229,14 @@ export default function HomePage() {
                 ...task,
                 status: "actionable" as TaskStatus,
                 subtitle: "Upload recycling photo",
+              };
+            }
+
+            if (task.category === "low_carbon_commute") {
+              return {
+                ...task,
+                status: "actionable" as TaskStatus,
+                subtitle: "Upload timeline screenshot",
               };
             }
 
@@ -634,6 +664,91 @@ export default function HomePage() {
     }
   };
 
+  const onTimelineSelected = async (file: File | null) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setTimelineStatus("Please upload an image file.");
+      return;
+    }
+
+    const dataUrl = await toDataUrl(file);
+    setTimelinePreview(dataUrl);
+    setIsTimelineSectionOpen(true);
+    setTimelineStatus("");
+  };
+
+  const submitTimelineScreenshot = async () => {
+    if (!timelinePreview) {
+      setTimelineStatus("Upload a Google Timeline screenshot first.");
+      return;
+    }
+
+    if (!token) {
+      setTimelineStatus("Please complete login first.");
+      return;
+    }
+
+    try {
+      setIsSubmittingTimeline(true);
+      setTimelineStatus("Verifying timeline and carbon impact...");
+
+      const res = await fetch(`${API_URL}/api/actions/timeline-screenshot`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ imageDataUrl: timelinePreview }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        setTimelineStatus(payload?.error || "Could not verify timeline screenshot.");
+        return;
+      }
+
+      const xpEarned = Number(payload?.reward?.xpEarned || 0);
+      const wispEarned = Number(payload?.reward?.wispEarned || 0);
+      const steps = Number(payload?.timeline?.totalSteps || 0);
+      const date = String(payload?.timeline?.screenshotDate || "");
+      const tooHighEmission = Boolean(payload?.timeline?.tooHighEmission);
+
+      setXp((prev) => Math.min(prev + xpEarned, 50));
+      setWispBalanceDelta((prev) => prev + wispEarned);
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.category === "low_carbon_commute"
+            ? {
+                ...task,
+                status: "completed" as TaskStatus,
+                subtitle: tooHighEmission
+                  ? `Verified ${date}: high emission, reward 0`
+                  : `Verified ${date}: ${steps} steps`,
+              }
+            : task,
+        ),
+      );
+
+      if (tooHighEmission) {
+        setTimelineStatus(`Verified ${date}. Carbon emission too high, reward set to 0.`);
+      } else {
+        setTimelineStatus(`Verified ${date}. +${xpEarned} XP and +${wispEarned.toFixed(4)} WISP credited.`);
+      }
+
+      setTimelinePreview(null);
+      setIsTimelineSectionOpen(false);
+    } catch {
+      setTimelineStatus("Could not submit timeline screenshot right now. Please try again.");
+    } finally {
+      setIsSubmittingTimeline(false);
+    }
+  };
+
+  if (!token) {
+    return null;
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-900 font-sans p-4 sm:p-8 overflow-y-auto">
       {/* Mobile Device Mockup */}
@@ -1020,6 +1135,61 @@ export default function HomePage() {
             {recycleStatus ? <p className="mt-2 text-[11px] font-semibold text-slate-500">{recycleStatus}</p> : null}
           </div>
 
+          <div className="bg-white rounded-2xl p-4 mb-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] border border-slate-100">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div>
+                <h4 className="text-sm font-bold text-[#3b415a]">Google Timeline Screenshot</h4>
+                <p className="text-[11px] text-slate-500 font-medium">Checks steps and date, rewards low-carbon commute, 0 on high emission</p>
+              </div>
+              <button
+                onClick={() => setIsTimelineSectionOpen((prev) => !prev)}
+                className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md"
+              >
+                {isTimelineSectionOpen ? "Close" : "Open"}
+              </button>
+            </div>
+
+            {isTimelineSectionOpen && (
+              <>
+                {timelinePreview ? (
+                  <img
+                    src={timelinePreview}
+                    alt="Google timeline screenshot preview"
+                    className="w-full h-32 object-cover rounded-xl border border-slate-200 mb-3"
+                  />
+                ) : (
+                  <label className="w-full h-24 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-slate-50 transition mb-3">
+                    <Upload className="w-5 h-5 text-slate-500" />
+                    <span className="text-xs font-semibold text-slate-600">Tap to upload timeline screenshot</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => onTimelineSelected(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                )}
+
+                <button
+                  onClick={submitTimelineScreenshot}
+                  disabled={isSubmittingTimeline}
+                  className="w-full rounded-xl bg-cyan-600 text-white py-2.5 text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {isSubmittingTimeline ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    "Verify Timeline"
+                  )}
+                </button>
+              </>
+            )}
+
+            {timelineStatus ? <p className="mt-2 text-[11px] font-semibold text-slate-500">{timelineStatus}</p> : null}
+          </div>
+
           {/* Task List */}
           <div className="space-y-3">
             {tasks.map((task) => (
@@ -1057,7 +1227,7 @@ export default function HomePage() {
                   <div className="bg-[#f0f4f8] text-[#3b415a] text-[10px] font-bold px-2 py-0.5 rounded-full">
                     +{task.xp} XP
                   </div>
-                  {task.status === "actionable" && !["public_transit", "screen_time_reduction", "plant_based_food", "recycling"].includes(task.category) && (
+                  {task.status === "actionable" && !["public_transit", "screen_time_reduction", "plant_based_food", "recycling", "low_carbon_commute"].includes(task.category) && (
                     <button
                       onClick={() => submitManualAction(task.category)}
                       disabled={verifyingCategory === task.category}

@@ -54,15 +54,21 @@ const categoryAccent: Record<string, string> = {
 export default function AdventuresPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, isLoading: isAuthLoading } = useAuth();
 
   const [quests, setQuests] = useState<Quest[]>([]);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [claiming, setClaiming] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [profileXp, setProfileXp] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthLoading && !token) {
+      router.replace("/onboarding");
+    }
+  }, [isAuthLoading, router, token]);
 
   const loadAdventuresData = useCallback(async () => {
     if (!token) {
@@ -71,7 +77,7 @@ export default function AdventuresPage() {
     }
 
     try {
-      setIsLoading(true);
+      setIsPageLoading(true);
       setStatusMessage("");
 
       const [profileRes, questsRes] = await Promise.all([
@@ -97,7 +103,7 @@ export default function AdventuresPage() {
     } catch {
       setStatusMessage("Could not load adventures right now.");
     } finally {
-      setIsLoading(false);
+      setIsPageLoading(false);
     }
   }, [API_URL, token]);
 
@@ -203,6 +209,10 @@ export default function AdventuresPage() {
   const circ = 2 * Math.PI * radius;
   const progress = circ - ((total ? completed / total : 0) * circ);
 
+  if (!token) {
+    return null;
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-900 font-sans p-4 sm:p-8">
       <div className="relative w-full max-w-100 h-212.5 bg-[#f4f7fa] rounded-[3rem] shadow-2xl overflow-hidden border-8 border-slate-800 flex flex-col">
@@ -305,14 +315,14 @@ export default function AdventuresPage() {
             </div>
           ) : null}
 
-          {isLoading ? (
+          {isPageLoading ? (
             <div className="bg-white rounded-2xl p-4 flex items-center gap-2 text-sm font-semibold text-slate-600">
               <Loader2 className="w-4 h-4 animate-spin" />
               Loading adventures...
             </div>
           ) : null}
 
-          {!isLoading && filtered.length === 0 ? (
+          {!isPageLoading && filtered.length === 0 ? (
             <div className="bg-white rounded-2xl p-4 text-sm font-semibold text-slate-500">
               No adventures available yet.
             </div>

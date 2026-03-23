@@ -11,6 +11,7 @@ const {
   submitScreenTimeAction,
   submitPlantMealAction,
   submitRecyclingPhotoAction,
+  submitTimelineScreenshotAction,
   getActions,
   getActionById,
 } = require('../controllers/actionsController');
@@ -125,6 +126,25 @@ router.post(
   ],
   validate,
   submitRecyclingPhotoAction
+);
+
+/**
+ * POST /api/actions/timeline-screenshot
+ * Verify Google Maps Timeline screenshot and reward low-carbon commute.
+ */
+router.post(
+  '/timeline-screenshot',
+  authenticate,
+  actionsLimiter,
+  [
+    body('imageDataUrl')
+      .isString()
+      .withMessage('imageDataUrl must be a string')
+      .isLength({ min: 100 })
+      .withMessage('imageDataUrl appears too small to be a valid image data URL'),
+  ],
+  validate,
+  submitTimelineScreenshotAction
 );
 
 /**
