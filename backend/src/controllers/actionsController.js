@@ -4,6 +4,7 @@ const { calculateWispReward } = require('../lib/rewards');
 const { getActionXp, calculateLevel, updateQuestProgress } = require('../lib/gameLogic');
 const { verifyTicketWithOpenRouter } = require('../lib/ticketPhotoVerifier');
 const { verifyElectricityBillWithAI } = require('../lib/electricityBillVerifier');
+const { verifyScreenTimeScreenshotWithAI } = require('../lib/screenTimeVerifier');
 
 /**
  * POST /api/actions
@@ -377,6 +378,101 @@ async function submitElectricityBillAction(req, res, next) {
 }
 
 /**
+ * POST /api/actions/screen-time
+ * Upload daily screen-time screenshot, extract usage minutes with AI,
+ * estimate energy use, and reward low screen-time behavior.
+ */
+async function submitScreenTimeAction(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { imageDataUrl } = req.body;
+
+    const screen = await verifyScreenTimeScreenshotWithAI({ imageDataUrl });
+
+    if (!screen.isScreenTimeScreenshot || screen.confidence < 0.4) {
+      return res.status(422).json({
+        error: 'Could not verify a valid daily screen-time screenshot',
+        verification: {
+          confidence: screen.confidence,
+          reasoning: screen.reasoning,
+        },
+      });
+    }
+
+    const existingToday = await query(
+      `SELECT id
+       FROM actions
+       WHERE user_id = $1
+         AND category = 'screen_time_reduction'
+         AND submitted_at::date = CURRENT_DATE
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (existingToday.rows.length) {
+      return res.status(409).json({ error: 'Screen-time screenshot already submitted today' });
+    }
+
+    const daySequence = await getDaySequenceForUser(userId);
+    const category = 'screen_time_reduction';
+    const proofHash = `screentime:${new Date().toISOString().slice(0, 10)}:${screen.totalMinutes}`;
+
+    const baseWisp = calculateWispReward(category, daySequence);
+    const scoreMultiplier = 0.5 + (screen.score / 100); // lower usage gives higher score and reward
+    const wispEarned = round8(baseWisp * scoreMultiplier);
+
+    const baseXp = getActionXp(category);
+    const xpEarned = baseXp + Math.round(screen.score / 10);
+
+    const actionInsert = await query(
+      `INSERT INTO actions
+         (user_id, category, proof_hash, hcs_topic_id, hcs_sequence_number, day_sequence, wisp_earned, xp_earned)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [userId, category, proofHash, null, null, daySequence, wispEarned, xpEarned]
+    );
+
+    const userUpdate = await query(
+      `UPDATE users
+       SET experience = experience + $1,
+           gold = gold + $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING experience, level`,
+      [xpEarned, wispEarned, userId]
+    );
+
+    const { experience, level: oldLevel } = userUpdate.rows[0];
+    const newLevel = calculateLevel(experience);
+    if (newLevel > oldLevel) {
+      await query('UPDATE users SET level = $1 WHERE id = $2', [newLevel, userId]);
+    }
+
+    await updateStreak(userId, daySequence, xpEarned);
+    await updateQuestProgress(query, userId, category);
+
+    return res.status(201).json({
+      action: actionInsert.rows[0],
+      reward: {
+        wispEarned,
+        xpEarned,
+      },
+      screen: {
+        totalMinutes: screen.totalMinutes,
+        estimatedEnergyWh: screen.estimatedEnergyWh,
+        score: screen.score,
+        confidence: screen.confidence,
+        screenshotDate: screen.screenshotDate,
+        reasoning: screen.reasoning,
+      },
+      levelUp: newLevel > oldLevel ? newLevel : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/actions
  */
 async function getActions(req, res, next) {
@@ -466,6 +562,7 @@ module.exports = {
   submitTicketPhotoAction,
   submitManualAction,
   submitElectricityBillAction,
+  submitScreenTimeAction,
   getActions,
   getActionById,
 };
