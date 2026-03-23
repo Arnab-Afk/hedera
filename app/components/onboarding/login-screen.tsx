@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/context/auth-context";
-import { Button } from "@/components/ui/button";
-import { Chrome, Wallet, Loader2 } from "lucide-react";
+import { Chrome, Wallet, Loader2, Leaf } from "lucide-react";
 
 interface LoginScreenProps {
   onDone: () => void;
@@ -97,64 +96,61 @@ export default function LoginScreen({ onDone }: LoginScreenProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-[#0d1f14] text-white">
-      <div className="w-full max-w-md space-y-8 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl">
-            Welcome to <span className="text-[#4ade80]">Wisp</span>
-          </h1>
-          <p className="text-zinc-400 text-lg">
-            Connect to start growing your spirit and earning rewards.
-          </p>
+    <div className="flex-1 flex flex-col bg-[#f4f7fa] relative overflow-hidden">
+      {/* Sky gradient */}
+      <div className="absolute top-0 left-0 w-full h-36 bg-linear-to-b from-[#e0e8f5] to-transparent z-0" />
+      <div className="absolute top-8 left-8 w-14 h-5 bg-white rounded-full opacity-60 blur-[1px]" />
+      <div className="absolute top-14 right-8 w-20 h-6 bg-white rounded-full opacity-50 blur-[1px]" />
+
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 gap-6 relative z-10">
+        {/* Logo */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shadow-md">
+            <Leaf className="w-8 h-8 text-emerald-600" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-[#3b415a] tracking-tight">
+              Welcome to <span className="text-emerald-600">Wisp</span>
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">Connect to start your eco journey</p>
+          </div>
         </div>
 
-        <div className="space-y-4 pt-8">
-          <Button 
+        {/* Auth buttons */}
+        <div className="w-full space-y-3">
+          <button
             onClick={handleGoogleLogin}
             disabled={!!loading || !web3auth}
-            className="w-full h-14 text-lg bg-white text-black hover:bg-zinc-200 transition-all rounded-2xl flex items-center justify-center gap-3"
+            className="w-full py-3.5 bg-white border border-slate-200 text-[#3b415a] text-sm font-bold rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 hover:border-slate-300 transition disabled:opacity-50 shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
           >
             {loading === "google" ? (
-              <Loader2 className="animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              <>
-                <Chrome className="w-6 h-6" />
-                Continue with Google
-              </>
+              <><Chrome className="w-5 h-5" /> Continue with Google</>
             )}
-          </Button>
+          </button>
 
-          <div className="relative py-4">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-zinc-800" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#0d1f14] px-2 text-zinc-500 font-medium">
-                Or connect directly
-              </span>
-            </div>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-xs text-slate-400 font-medium">or connect directly</span>
+            <div className="flex-1 h-px bg-slate-200" />
           </div>
 
-          <Button 
-            variant="outline"
+          <button
             onClick={handleWalletLogin}
             disabled={!!loading || !hashconnect}
-            className="w-full h-14 text-lg border-zinc-700 hover:bg-white/5 transition-all rounded-2xl flex items-center justify-center gap-3 text-white"
+            className="w-full py-3.5 bg-[#3b415a] text-white text-sm font-bold rounded-2xl flex items-center justify-center gap-3 hover:bg-[#2d3348] transition disabled:opacity-50"
           >
             {loading === "wallet" ? (
-              <Loader2 className="animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              <>
-                <Wallet className="w-6 h-6" />
-                Connect Hedera Wallet
-              </>
+              <><Wallet className="w-5 h-5" /> Connect Hedera Wallet</>
             )}
-          </Button>
+          </button>
         </div>
 
-        <p className="text-xs text-zinc-500 pt-8 px-4">
-          By connecting, you agree to our Terms of Service and Privacy Policy. 
-          Your green actions are verified privately on-chain.
+        <p className="text-[11px] text-slate-400 text-center leading-relaxed px-2">
+          Your green actions are verified privately on-chain. Raw data never leaves your device.
         </p>
       </div>
     </div>

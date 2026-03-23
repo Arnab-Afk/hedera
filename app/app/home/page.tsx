@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Leaf,
   Zap,
@@ -218,18 +219,18 @@ export default function HomePage() {
 
         {/* Bottom Navigation */}
         <div className="absolute bottom-0 w-full h-20 bg-white border-t border-slate-100 flex justify-around items-center px-6 pb-2 rounded-b-[2.5rem] shadow-[0_-10px_20px_rgba(0,0,0,0.03)] z-30">
-          <button className="flex flex-col items-center gap-1 text-[#3b415a]">
+          <div className="flex flex-col items-center gap-1 text-[#3b415a]">
             <Home className="w-6 h-6" />
             <span className="text-[10px] font-bold">Home</span>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-slate-300 hover:text-[#3b415a] transition-colors">
+          </div>
+          <Link href="/adventures" className="flex flex-col items-center gap-1 text-slate-300 hover:text-[#3b415a] transition-colors">
             <Play className="w-6 h-6" />
             <span className="text-[10px] font-bold">Adventures</span>
-          </button>
-          <button className="flex flex-col items-center gap-1 text-slate-300 hover:text-[#3b415a] transition-colors">
+          </Link>
+          <Link href="/profile" className="flex flex-col items-center gap-1 text-slate-300 hover:text-[#3b415a] transition-colors">
             <User className="w-6 h-6" />
             <span className="text-[10px] font-bold">Profile</span>
-          </button>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,138 +1,115 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-interface Props {
+interface SplashScreenProps {
   onDone: () => void;
 }
 
-export default function SplashScreen({ onDone }: Props) {
+export default function SplashScreen({ onDone }: SplashScreenProps) {
+  const [visible, setVisible] = useState(false);
+
   useEffect(() => {
-    const t = setTimeout(onDone, 2600);
+    setVisible(true);
+    const t = setTimeout(onDone, 2800);
     return () => clearTimeout(t);
   }, [onDone]);
 
+  const particles = Array.from({ length: 10 }, (_, i) => i);
+
   return (
-    <div className="splash-root">
-      <div className="splash-bg" />
+    <div
+      className="flex-1 flex flex-col items-center justify-center relative overflow-hidden"
+      style={{
+        background: "linear-gradient(to bottom, #e0e8f5, #f4f7fa)",
+        opacity: visible ? 1 : 0,
+        transition: "opacity 0.6s ease",
+      }}
+    >
+      {/* Clouds */}
+      <div className="absolute top-10 left-6 w-14 h-5 bg-white rounded-full opacity-60 blur-[1px]" />
+      <div className="absolute top-16 right-8 w-20 h-6 bg-white rounded-full opacity-50 blur-[1px]" />
+      <div className="absolute top-8 right-20 w-10 h-4 bg-white rounded-full opacity-40 blur-[1px]" />
+
+      {/* Emerald orb */}
+      <div
+        className="absolute top-1/4 w-36 h-36 rounded-full"
+        style={{
+          background: "radial-gradient(circle at 40% 40%, #6ee7b7, #059669)",
+          filter: "blur(24px)",
+          opacity: 0.35,
+        }}
+      />
 
       {/* Floating particles */}
-      {[...Array(14)].map((_, i) => (
-        <span key={i} className="particle" style={{ "--i": i } as React.CSSProperties} />
+      {particles.map((i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            width: 5,
+            height: 5,
+            borderRadius: "50%",
+            background: "rgba(52,211,153,0.5)",
+            bottom: -10,
+            left: `${i * 9 + 2}%`,
+            animation: `float-up 4s ease-in infinite`,
+            animationDelay: `${i * 0.3}s`,
+          }}
+        />
       ))}
 
-      <div className="splash-content">
-        <div className="splash-orb">
-          <span className="splash-plant">🌿</span>
-        </div>
-        <h1 className="splash-title">Wisp</h1>
-        <p className="splash-sub">The Privacy-First Eco-Companion</p>
-        <div className="splash-dots">
-          <span /><span /><span />
-        </div>
+      {/* Logo */}
+      <div
+        className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6 shadow-xl"
+        style={{
+          background: "linear-gradient(135deg, #6ee7b7, #059669)",
+          animation: "fade-in 0.8s ease both",
+        }}
+      >
+        <span style={{ fontSize: 48, lineHeight: 1 }}>🌿</span>
+      </div>
+
+      <h1
+        className="text-4xl font-black tracking-tight text-[#3b415a] mb-2"
+        style={{ animation: "fade-in 0.8s ease 0.2s both" }}
+      >
+        Wisp
+      </h1>
+      <p
+        className="text-sm font-medium text-slate-400 text-center px-8"
+        style={{ animation: "fade-in 0.8s ease 0.4s both" }}
+      >
+        The Privacy-First Eco-Companion
+      </p>
+
+      {/* Loading dots */}
+      <div
+        className="absolute bottom-12 flex gap-2"
+        style={{ animation: "fade-in 0.8s ease 0.6s both" }}
+      >
+        {[0, 0.2, 0.4].map((delay, idx) => (
+          <div
+            key={idx}
+            className="w-2 h-2 rounded-full bg-emerald-400"
+            style={{ animation: `pulse 1.2s ease-in-out ${delay}s infinite` }}
+          />
+        ))}
       </div>
 
       <style>{`
-        .splash-root {
-          position: fixed;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(160deg, #0d1f14 0%, #0a2e1a 40%, #0d1b2a 100%);
-          overflow: hidden;
-          z-index: 100;
-        }
-        .splash-bg {
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(ellipse 60% 50% at 30% 20%, rgba(52,211,153,.18) 0%, transparent 70%),
-            radial-gradient(ellipse 50% 40% at 75% 80%, rgba(16,185,129,.12) 0%, transparent 70%);
-        }
-        .particle {
-          position: absolute;
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: rgba(52, 211, 153, 0.55);
-          animation: float-up 4s ease-in infinite;
-          animation-delay: calc(var(--i) * 0.3s);
-          left: calc(var(--i) * 7%);
-          bottom: -20px;
-        }
         @keyframes float-up {
-          0%   { transform: translateY(0) scale(1);   opacity: 0; }
+          0%   { transform: translateY(0) scale(1); opacity: 0; }
           20%  { opacity: 0.8; }
-          100% { transform: translateY(-110vh) scale(0.3); opacity: 0; }
-        }
-        .splash-content {
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 1.25rem;
-          animation: fade-in .8s ease both;
+          100% { transform: translateY(-300px) scale(0.5); opacity: 0; }
         }
         @keyframes fade-in {
-          from { opacity: 0; transform: translateY(24px); }
+          from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .splash-orb {
-          width: 120px;
-          height: 120px;
-          border-radius: 50%;
-          background: radial-gradient(circle at 40% 35%, #34d399, #059669);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 0 60px 12px rgba(52,211,153,.4);
-          animation: pulse-orb 2.4s ease-in-out infinite;
-        }
-        @keyframes pulse-orb {
-          0%, 100% { box-shadow: 0 0 60px 12px rgba(52,211,153,.4); }
-          50%       { box-shadow: 0 0 80px 20px rgba(52,211,153,.6); }
-        }
-        .splash-plant {
-          font-size: 3.5rem;
-          animation: sway 3s ease-in-out infinite;
-        }
-        @keyframes sway {
-          0%, 100% { transform: rotate(-6deg); }
-          50%       { transform: rotate(6deg); }
-        }
-        .splash-title {
-          font-size: 3rem;
-          font-weight: 800;
-          color: #ecfdf5;
-          letter-spacing: -0.02em;
-          margin: 0;
-        }
-        .splash-sub {
-          font-size: 1rem;
-          color: rgba(167,243,208,.75);
-          margin: 0;
-          text-align: center;
-          max-width: 240px;
-        }
-        .splash-dots {
-          display: flex;
-          gap: 8px;
-          margin-top: 1rem;
-        }
-        .splash-dots span {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #34d399;
-          animation: blink 1.4s ease-in-out infinite;
-        }
-        .splash-dots span:nth-child(2) { animation-delay: .2s; }
-        .splash-dots span:nth-child(3) { animation-delay: .4s; }
-        @keyframes blink {
-          0%, 100% { opacity: .3; transform: scale(.8); }
-          50%       { opacity: 1; transform: scale(1); }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 0.5; }
+          50%       { transform: scale(1.4); opacity: 1; }
         }
       `}</style>
     </div>
