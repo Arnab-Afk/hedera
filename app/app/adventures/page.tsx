@@ -1,82 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Train, Zap, ShoppingBag, Leaf, Home, Play, User,
-  CheckCircle2, Lock, RotateCcw, Star, ChevronRight,
+  CheckCircle2, Lock, RotateCcw, Star, ChevronRight, Loader2,
 } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
 
 type QuestStatus = "completed" | "available" | "locked";
 
 interface Quest {
-  id: number;
+  id: string;
+  questId?: string;
   title: string;
   description: string;
   icon: React.ElementType;
   gradient: string;
   xp: number;
   category: string;
+  backendCategory: string;
   status: QuestStatus;
   streak?: number;
+  currentCount?: number;
+  requirementCount?: number;
+  claimed?: boolean;
 }
 
-const initialQuests: Quest[] = [
-  {
-    id: 1,
-    title: "Ride the Rails",
-    description: "Take public transit instead of driving. Any bus, metro, or rail counts.",
-    icon: Train,
-    gradient: "from-violet-500 to-purple-600",
-    xp: 15,
-    category: "Transport",
-    status: "available",
-    streak: 3,
-  },
-  {
-    id: 2,
-    title: "Low Power Day",
-    description: "Keep energy usage below your 30-day average for a full day.",
-    icon: Zap,
-    gradient: "from-amber-400 to-orange-500",
-    xp: 20,
-    category: "Energy",
-    status: "completed",
-    streak: 5,
-  },
-  {
-    id: 3,
-    title: "Eco Market Run",
-    description: "Shop at a partner eco-business — zero-waste cafe, thrift store, or organic grocer.",
-    icon: ShoppingBag,
-    gradient: "from-emerald-400 to-teal-500",
-    xp: 25,
-    category: "Purchases",
-    status: "available",
-  },
-  {
-    id: 4,
-    title: "Plant-Based Meal",
-    description: "Buy a plant-based item via your grocery loyalty card.",
-    icon: Leaf,
-    gradient: "from-green-400 to-emerald-600",
-    xp: 15,
-    category: "Food",
-    status: "locked",
-  },
-  {
-    id: 5,
-    title: "Carbon Offset",
-    description: "Purchase a verified carbon offset certificate for a bonus reward.",
-    icon: Star,
-    gradient: "from-sky-400 to-blue-600",
-    xp: 50,
-    category: "Offset",
-    status: "locked",
-  },
-];
+interface BackendQuest {
+  id: string;
+  quest_id?: string;
+  title?: string;
+  description?: string;
+  category?: string;
+  current_count?: number;
+  requirement_count?: number;
+  xp_reward?: number;
+  completed?: boolean;
+  claimed?: boolean;
+}
 
-const CATEGORIES = ["All", "Transport", "Energy", "Purchases", "Food", "Offset"];
+const CATEGORIES = ["All", "Transport", "Energy", "Purchases", "Food", "Offset", "General"];
 
 const categoryAccent: Record<string, string> = {
   Transport: "text-violet-600 bg-violet-50 border-violet-200",
@@ -87,30 +52,146 @@ const categoryAccent: Record<string, string> = {
 };
 
 export default function AdventuresPage() {
-  const [quests, setQuests] = useState(initialQuests);
-  const [syncing, setSyncing] = useState<number | null>(null);
-  const [activeCategory, setActiveCategory] = useState("All");
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const router = useRouter();
+  const { token } = useAuth();
 
-  const handleSync = (id: number) => {
-    setSyncing(id);
-    setTimeout(() => {
-      setQuests((prev) =>
-        prev.map((q) =>
-          q.id === id && q.status === "available"
-            ? { ...q, status: "completed" as QuestStatus }
-            : q
-        )
-      );
-      setSyncing(null);
-    }, 1800);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [claiming, setClaiming] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [profileXp, setProfileXp] = useState(0);
+
+  const loadAdventuresData = useCallback(async () => {
+    if (!token) {
+      setQuests([]);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setStatusMessage("");
+
+      const [profileRes, questsRes] = await Promise.all([
+        fetch(`${API_URL}/api/game/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${API_URL}/api/quests`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      if (!profileRes.ok || !questsRes.ok) {
+        throw new Error("Failed to load adventures");
+      }
+
+      const profilePayload = await profileRes.json();
+      const questsPayload = await questsRes.json();
+
+      setProfileXp(Number(profilePayload?.experience || 0));
+
+      const backendQuests: BackendQuest[] = Array.isArray(questsPayload?.quests) ? questsPayload.quests : [];
+      setQuests(backendQuests.map(mapBackendQuestToUi));
+    } catch {
+      setStatusMessage("Could not load adventures right now.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [API_URL, token]);
+
+  useEffect(() => {
+    loadAdventuresData();
+  }, [loadAdventuresData]);
+
+  const handleVerify = async (quest: Quest) => {
+    if (!token) {
+      setStatusMessage("Please login first.");
+      return;
+    }
+
+    if (quest.status !== "available") {
+      return;
+    }
+
+    if (quest.backendCategory === "energy_reduction") {
+      try {
+        setSyncing(quest.id);
+        setStatusMessage("Submitting verification...");
+
+        const res = await fetch(`${API_URL}/api/actions/manual`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ category: "energy_reduction" }),
+        });
+
+        const payload = await res.json();
+        if (!res.ok) {
+          setStatusMessage(payload?.error || "Could not verify this action.");
+          return;
+        }
+
+        setStatusMessage("Action verified. Refreshing quest progress...");
+        await loadAdventuresData();
+      } catch {
+        setStatusMessage("Verification failed. Please try again.");
+      } finally {
+        setSyncing(null);
+      }
+      return;
+    }
+
+    setStatusMessage("Open Home to verify this adventure with upload/check-in.");
+    router.push("/home");
+  };
+
+  const handleClaim = async (quest: Quest) => {
+    if (!token || !quest.id) {
+      return;
+    }
+
+    try {
+      setClaiming(quest.id);
+      setStatusMessage("Claiming quest reward...");
+
+      const res = await fetch(`${API_URL}/api/quests/${quest.id}/claim`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        setStatusMessage(payload?.error || "Could not claim quest reward.");
+        return;
+      }
+
+      setStatusMessage(`Claimed +${Number(payload?.xp_reward || 0)} XP and +${Number(payload?.wisp_reward || 0)} WISP.`);
+      await loadAdventuresData();
+    } catch {
+      setStatusMessage("Claim failed. Please try again.");
+    } finally {
+      setClaiming(null);
+    }
   };
 
   const completed = quests.filter((q) => q.status === "completed").length;
   const total = quests.length;
   const xpEarned = quests
-    .filter((q) => q.status === "completed")
+    .filter((q) => q.claimed)
     .reduce((sum, q) => sum + q.xp, 0);
   const totalXp = quests.reduce((sum, q) => sum + q.xp, 0);
+
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+    quests.forEach((q) => set.add(q.category));
+    return ["All", ...Array.from(set)];
+  }, [quests]);
 
   const filtered =
     activeCategory === "All"
@@ -120,7 +201,7 @@ export default function AdventuresPage() {
   // SVG ring math
   const radius = 26;
   const circ = 2 * Math.PI * radius;
-  const progress = circ - (completed / total) * circ;
+  const progress = circ - ((total ? completed / total : 0) * circ);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-900 font-sans p-4 sm:p-8">
@@ -162,7 +243,7 @@ export default function AdventuresPage() {
             </svg>
             {/* Center label inside ring — positioned via negative margin trick */}
             <div className="relative -mt-13 flex flex-col items-center justify-center w-17 h-8.5">
-              <span className="text-[13px] font-black text-[#3b415a] leading-none">{xpEarned}</span>
+              <span className="text-[13px] font-black text-[#3b415a] leading-none">{profileXp}</span>
               <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-wider">XP</span>
             </div>
           </div>
@@ -176,12 +257,12 @@ export default function AdventuresPage() {
           </div>
           <div className="w-px h-6 bg-slate-100" />
           <div className="text-center">
-            <p className="text-base font-black text-[#3b415a]">{total - completed}</p>
+            <p className="text-base font-black text-[#3b415a]">{Math.max(0, total - completed)}</p>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Left</p>
           </div>
           <div className="w-px h-6 bg-slate-100" />
           <div className="text-center">
-            <p className="text-base font-black text-emerald-600">{totalXp - xpEarned}</p>
+            <p className="text-base font-black text-emerald-600">{Math.max(0, totalXp - xpEarned)}</p>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">XP to earn</p>
           </div>
           <div className="w-px h-6 bg-slate-100" />
@@ -190,17 +271,17 @@ export default function AdventuresPage() {
             <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
               <div
                 className="bg-emerald-500 h-1.5 rounded-full transition-all duration-700"
-                style={{ width: `${(completed / total) * 100}%` }}
+                style={{ width: `${total ? (completed / total) * 100 : 0}%` }}
               />
             </div>
-            <p className="text-[9px] font-bold text-slate-400">{Math.round((completed / total) * 100)}% complete</p>
+            <p className="text-[9px] font-bold text-slate-400">{Math.round(total ? (completed / total) * 100 : 0)}% complete</p>
           </div>
         </div>
 
         {/* Category filter */}
         <div className="relative z-20 px-5 mb-3">
           <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-            {CATEGORIES.map((cat) => (
+            {(availableCategories.length ? availableCategories : CATEGORIES).map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
@@ -218,11 +299,32 @@ export default function AdventuresPage() {
 
         {/* Quest list */}
         <div className="flex-1 overflow-y-auto hide-scrollbar px-5 pb-24 space-y-2.5 z-20">
+          {statusMessage ? (
+            <div className="bg-white border border-slate-200 rounded-xl p-2.5 text-[11px] font-semibold text-slate-600">
+              {statusMessage}
+            </div>
+          ) : null}
+
+          {isLoading ? (
+            <div className="bg-white rounded-2xl p-4 flex items-center gap-2 text-sm font-semibold text-slate-600">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading adventures...
+            </div>
+          ) : null}
+
+          {!isLoading && filtered.length === 0 ? (
+            <div className="bg-white rounded-2xl p-4 text-sm font-semibold text-slate-500">
+              No adventures available yet.
+            </div>
+          ) : null}
+
           {filtered.map((quest) => {
             const Icon = quest.icon;
             const isLocked = quest.status === "locked";
             const isDone = quest.status === "completed";
             const isSyncing = syncing === quest.id;
+            const isClaiming = claiming === quest.id;
+            const canClaim = isDone && !quest.claimed;
 
             return (
               <div
@@ -248,11 +350,16 @@ export default function AdventuresPage() {
                       </h4>
                       {quest.streak && !isDone && !isLocked && (
                         <span className="text-[9px] font-black text-orange-500 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded-full">
-                          \U0001f525{quest.streak}d
+                          {quest.streak}d streak
                         </span>
                       )}
                     </div>
                     <p className="text-[11px] text-slate-400 leading-relaxed font-medium">{quest.description}</p>
+                    {typeof quest.currentCount === "number" && typeof quest.requirementCount === "number" ? (
+                      <p className="mt-1 text-[10px] font-bold text-slate-500">
+                        Progress: {quest.currentCount}/{quest.requirementCount}
+                      </p>
+                    ) : null}
 
                     {/* Footer row */}
                     <div className="flex items-center justify-between mt-2">
@@ -268,9 +375,23 @@ export default function AdventuresPage() {
                         {isDone && (
                           <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                         )}
-                        {quest.status === "available" && (
+                        {canClaim && (
                           <button
-                            onClick={() => handleSync(quest.id)}
+                            onClick={() => handleClaim(quest)}
+                            disabled={isClaiming}
+                            className="flex items-center gap-1 text-white text-[10px] font-black px-3 py-1.5 rounded-full transition-all disabled:opacity-60 bg-linear-to-r from-emerald-500 to-green-600"
+                          >
+                            {isClaiming ? (
+                              <><Loader2 className="w-3 h-3 animate-spin" />Claiming</>
+                            ) : (
+                              <>Claim<ChevronRight className="w-3 h-3" /></>
+                            )}
+                          </button>
+                        )}
+
+                        {quest.status === "available" && !canClaim && (
+                          <button
+                            onClick={() => handleVerify(quest)}
                             disabled={isSyncing}
                             className={`flex items-center gap-1 text-white text-[10px] font-black px-3 py-1.5 rounded-full transition-all disabled:opacity-60 bg-linear-to-r ${quest.gradient}`}
                           >
@@ -293,9 +414,12 @@ export default function AdventuresPage() {
           })}
 
           {/* Add source CTA */}
-          <button className="w-full py-3.5 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 text-slate-400 text-xs font-bold hover:bg-white hover:border-slate-300 hover:text-slate-600 transition">
-            + Connect New Data Source
-          </button>
+          <Link
+            href="/home"
+            className="w-full py-3.5 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 text-slate-400 text-xs font-bold hover:bg-white hover:border-slate-300 hover:text-slate-600 transition"
+          >
+            Open Home to Verify More Adventures
+          </Link>
         </div>
 
         {/* Bottom Navigation */}
@@ -316,4 +440,58 @@ export default function AdventuresPage() {
       </div>
     </div>
   );
+}
+
+function mapBackendQuestToUi(quest: BackendQuest): Quest {
+  const backendCategory = String(quest?.category || "");
+  const icon = getIconForCategory(backendCategory);
+  const gradient = getGradientForCategory(backendCategory);
+  const category = getDisplayCategory(backendCategory);
+  const completed = Boolean(quest?.completed);
+
+  return {
+    id: String(quest?.id || ""),
+    questId: String(quest?.quest_id || ""),
+    title: String(quest?.title || "Adventure"),
+    description: String(quest?.description || "Complete a green action to earn rewards."),
+    icon,
+    gradient,
+    xp: Number(quest?.xp_reward || 0),
+    category,
+    backendCategory,
+    status: completed ? "completed" : "available",
+    currentCount: Number(quest?.current_count || 0),
+    requirementCount: Number(quest?.requirement_count || 1),
+    claimed: Boolean(quest?.claimed),
+  };
+}
+
+function getDisplayCategory(category: string) {
+  const normalized = category.toLowerCase();
+  if (normalized.includes("transit") || normalized.includes("transport")) return "Transport";
+  if (normalized.includes("energy") || normalized.includes("power")) return "Energy";
+  if (normalized.includes("purchase") || normalized.includes("shop") || normalized.includes("merchant")) return "Purchases";
+  if (normalized.includes("food") || normalized.includes("plant")) return "Food";
+  if (normalized.includes("offset") || normalized.includes("carbon")) return "Offset";
+  return "General";
+}
+
+function getIconForCategory(category: string) {
+  const normalized = category.toLowerCase();
+  if (normalized.includes("transit") || normalized.includes("transport")) return Train;
+  if (normalized.includes("energy") || normalized.includes("power")) return Zap;
+  if (normalized.includes("purchase") || normalized.includes("shop") || normalized.includes("merchant")) return ShoppingBag;
+  if (normalized.includes("food") || normalized.includes("plant")) return Leaf;
+  if (normalized.includes("offset") || normalized.includes("carbon")) return Star;
+  return Leaf;
+}
+
+function getGradientForCategory(category: string) {
+  const normalized = category.toLowerCase();
+  if (normalized.includes("transit") || normalized.includes("transport")) return "from-violet-500 to-purple-600";
+  if (normalized.includes("energy") || normalized.includes("power")) return "from-amber-400 to-orange-500";
+  if (normalized.includes("purchase") || normalized.includes("shop") || normalized.includes("merchant")) return "from-emerald-400 to-teal-500";
+  if (normalized.includes("food") || normalized.includes("plant")) return "from-green-400 to-emerald-600";
+  if (normalized.includes("offset") || normalized.includes("carbon")) return "from-sky-400 to-blue-600";
+  return "from-slate-400 to-slate-600";
 }

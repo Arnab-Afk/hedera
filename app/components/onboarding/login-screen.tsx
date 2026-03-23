@@ -45,7 +45,15 @@ export default function LoginScreen({ onDone }: LoginScreenProps) {
     if (!hashconnect || !hcData) return;
     setLoading("wallet");
     try {
-      await hashconnect.connectToLocalWallet();
+      const connectToWallet =
+        (hashconnect as { connectToLocalWallet?: () => Promise<unknown> }).connectToLocalWallet ||
+        (hashconnect as { openPairingModal?: () => Promise<unknown> }).openPairingModal;
+
+      if (!connectToWallet) {
+        throw new Error("Wallet connection method is unavailable on this HashConnect version.");
+      }
+
+      await connectToWallet.call(hashconnect);
       hashconnect.pairingEvent.once(async (pairingData) => {
         const walletAddress = pairingData.accountIds[0];
         const challengeRes = await fetch(`${API_URL}/api/auth/challenge?walletAddress=${walletAddress}`);

@@ -2,8 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 // Import types only to avoid SSR errors
-import type { Web3Auth } from "@web3auth/modal";
-import type { HashConnect, HashConnectTypes } from "hashconnect";
 
 interface User {
   id: string;
@@ -20,8 +18,8 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
-  web3auth: Web3Auth | null;
-  hashconnect: HashConnect | null;
+  web3auth: any | null;
+  hashconnect: any | null;
   hcData: any | null;
 }
 
@@ -34,22 +32,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [web3auth, setWeb3auth] = useState<Web3Auth | null>(null);
-  const [hashconnect, setHashconnect] = useState<HashConnect | null>(null);
+  const [web3auth, setWeb3auth] = useState<any | null>(null);
+  const [hashconnect, setHashconnect] = useState<any | null>(null);
   const [hcData, setHcData] = useState<any | null>(null);
 
   useEffect(() => {
     const init = async () => {
       if (typeof window === "undefined") return;
 
+      // Always restore persisted auth state first so UI can hydrate even if wallet SDKs fail.
+      try {
+        const savedToken = localStorage.getItem("wisp_token");
+        const savedUser = localStorage.getItem("wisp_user");
+        if (savedToken && savedUser) {
+          setToken(savedToken);
+          setUser(JSON.parse(savedUser));
+        }
+      } catch (restoreErr) {
+        console.error("Session restore error:", restoreErr);
+      }
+
       try {
         // 1. Dynamic Imports to avoid SSR "require" errors
         const { Web3Auth } = await import("@web3auth/modal");
         const { CHAIN_NAMESPACES } = await import("@web3auth/base");
-        const { HashConnect } = await import("hashconnect");
+        const Web3AuthCtor: any = Web3Auth;
 
         console.log("Initializing Web3Auth...");
-        const w3a = new Web3Auth({
+        const w3a = new Web3AuthCtor({
           clientId,
           web3AuthNetwork,
           chainConfig: {
@@ -65,26 +75,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await (w3a as any).init();
         }
         setWeb3auth(w3a);
-
-        console.log("Initializing HashConnect...");
-        const hc = new HashConnect(true);
-        const appMetadata = {
-          name: "Wisp",
-          description: "Privacy-First Eco-Companion",
-          icon: "https://wisp.arnabbhowmik.in/icon.png",
-        };
-        const data = await hc.init(appMetadata, "testnet", false);
-        setHashconnect(hc as any);
-        setHcData(data);
-
-        const savedToken = localStorage.getItem("wisp_token");
-        const savedUser = localStorage.getItem("wisp_user");
-        if (savedToken && savedUser) {
-          setToken(savedToken);
-          setUser(JSON.parse(savedUser));
-        }
       } catch (error) {
-        console.error("Initialization Error:", error);
+        console.error("Web3Auth Initialization Error:", error);
+      }
+
+      try {
+        const { HashConnect } = await import("hashconnect");
+        console.log("Initializing HashConnect...");
+        const HashConnectCtor: any = HashConnect;
+        const hc = new HashConnectCtor(true);
+        const iconUrl = "https://wisp.arnabbhowmik.in/icon.png";
+        const metadataCandidates: Array<Record<string, unknown>> = [
+          {
+            name: "Wisp",
+            description: "Privacy-First Eco-Companion",
+            icon: iconUrl,
+          },
+          {
+            name: "Wisp",
+            description: "Privacy-First Eco-Companion",
+            icons: [iconUrl],
+          },
+        ];
+
+        let data: unknown = null;
+        let lastInitError: unknown = null;
+        for (const appMetadata of metadataCandidates) {
+          try {
+            data = await hc.init(appMetadata as never, "testnet", false);
+            lastInitError = null;
+            break;
+          } catch (candidateErr) {
+            lastInitError = candidateErr;
+          }
+        }
+
+        if (lastInitError) {
+          throw lastInitError;
+        }
+
+        setHashconnect(hc);
+        setHcData(data);
+      } catch (error) {
+        console.error("HashConnect Initialization Error:", error);
       } finally {
         setIsLoading(false);
       }
