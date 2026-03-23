@@ -13,18 +13,26 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export default function LoginScreen({ onDone }: LoginScreenProps) {
   const [loading, setLoading] = useState<"google" | "wallet" | null>(null);
-  const { login } = useAuth();
+  const { login, web3auth, hashconnect, hcData } = useAuth();
 
   const handleGoogleLogin = async () => {
+    if (!web3auth) return;
     setLoading("google");
     try {
+      const provider = await web3auth.connect();
+      const user = await web3auth.getUserInfo();
+      console.log("Web3Auth User Info:", user);
+      
+      // In a real Hedera-Web3Auth integration, you'd derive the Hedera address 
+      // from the private key provided by the 'provider'. 
+      // For this implementation, we send the social info to the backend.
       const response = await fetch(`${API_URL}/api/auth/social-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: "player@example.com",
-          socialId: "google_12345",
-          walletAddress: "0.0.mock_generated_address",
+          email: user.email,
+          socialId: user.userId || user.email,
+          walletAddress: `0.0.social_${(user.userId || user.email || "anon").replace(/[^a-zA-Z0-9]/g, "").slice(0, 8)}`, 
           authType: "google"
         }),
       });
@@ -42,28 +50,48 @@ export default function LoginScreen({ onDone }: LoginScreenProps) {
   };
 
   const handleWalletLogin = async () => {
+    if (!hashconnect || !hcData) return;
     setLoading("wallet");
     try {
-      const walletAddress = "0.0.existing_user_address";
-      const challengeRes = await fetch(`${API_URL}/api/auth/challenge?walletAddress=${walletAddress}`);
-      const { nonce } = await challengeRes.json();
+      // 1. Connect to HashPack/Blade
+      await hashconnect.connectToLocalWallet();
+      
+      // We listen for the 'foundExtension' or 'pairingEvent'
+      // For this UI flow, we'll assume the user selects an account in the popup
+      
+      hashconnect.pairingEvent.once(async (pairingData) => {
+        const walletAddress = pairingData.accountIds[0];
+        
+        // 2. Get Challenge from Backend
+        const challengeRes = await fetch(`${API_URL}/api/auth/challenge?walletAddress=${walletAddress}`);
+        const { nonce } = await challengeRes.json();
 
-      const signature = "mock_signature_from_wallet";
+        // 3. Sign with Wallet
+        const provider = hashconnect.getProvider("testnet", pairingData.topic, walletAddress);
+        const signer = hashconnect.getSigner(provider);
+        
+        const message = `Sign this nonce to authenticate with Wisp: ${nonce}`;
+        const signature = await signer.sign([new TextEncoder().encode(message)]);
 
-      const loginRes = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletAddress, signature }),
+        // 4. Verify on Backend
+        const loginRes = await fetch(`${API_URL}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            walletAddress, 
+            signature: Buffer.from(signature[0]).toString('hex') 
+          }),
+        });
+
+        const data = await loginRes.json();
+        if (data.token) {
+          login(data.user, data.token);
+          onDone();
+        }
       });
 
-      const data = await loginRes.json();
-      if (data.token) {
-        login(data.user, data.token);
-        onDone();
-      }
     } catch (error) {
       console.error("Wallet login failed", error);
-    } finally {
       setLoading(null);
     }
   };
@@ -83,7 +111,7 @@ export default function LoginScreen({ onDone }: LoginScreenProps) {
         <div className="space-y-4 pt-8">
           <Button 
             onClick={handleGoogleLogin}
-            disabled={!!loading}
+            disabled={!!loading || !web3auth}
             className="w-full h-14 text-lg bg-white text-black hover:bg-zinc-200 transition-all rounded-2xl flex items-center justify-center gap-3"
           >
             {loading === "google" ? (
@@ -110,7 +138,7 @@ export default function LoginScreen({ onDone }: LoginScreenProps) {
           <Button 
             variant="outline"
             onClick={handleWalletLogin}
-            disabled={!!loading}
+            disabled={!!loading || !hashconnect}
             className="w-full h-14 text-lg border-zinc-700 hover:bg-white/5 transition-all rounded-2xl flex items-center justify-center gap-3 text-white"
           >
             {loading === "wallet" ? (
