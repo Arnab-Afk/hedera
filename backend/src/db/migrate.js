@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS merchants (
   city            TEXT,
   latitude        NUMERIC(10, 7),
   longitude       NUMERIC(10, 7),
+  wallet_address  TEXT,                 -- Hedera account for payments
   wisp_accepted   BOOLEAN NOT NULL DEFAULT TRUE,
   discount_pct    INT DEFAULT 10,       -- % discount when paying with $WISP
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/context/auth-context";
 
 interface Props {
   value: string;
@@ -10,14 +11,37 @@ interface Props {
 
 export default function NameYourSpirit({ value, onChange, onDone }: Props) {
   const [shake, setShake] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { token } = useAuth();
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!value.trim()) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
       return;
     }
-    onDone();
+
+    setIsSaving(true);
+    try {
+      const response = await fetch("http://localhost:3001/api/game/spirit/rename", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: value }),
+      });
+
+      if (response.ok) {
+        onDone();
+      } else {
+        console.error("Failed to rename spirit");
+      }
+    } catch (error) {
+      console.error("Error renaming spirit:", error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -57,12 +81,17 @@ export default function NameYourSpirit({ value, onChange, onDone }: Props) {
             value={value}
             onChange={(e) => onChange(e.target.value)}
             autoFocus
+            disabled={isSaving}
           />
           <span className="name-char">{value.length}/20</span>
         </div>
 
-        <button className="name-btn" onClick={handleContinue}>
-          Continue →
+        <button 
+          className="name-btn" 
+          onClick={handleContinue}
+          disabled={isSaving}
+        >
+          {isSaving ? "Saving..." : "Continue →"}
         </button>
       </div>
 
@@ -215,6 +244,7 @@ export default function NameYourSpirit({ value, onChange, onDone }: Props) {
           transition: transform .15s, box-shadow .15s;
         }
         .name-btn:active { transform: scale(.97); }
+        .name-btn:disabled { opacity: 0.5; cursor: not-allowed; }
       `}</style>
     </div>
   );
