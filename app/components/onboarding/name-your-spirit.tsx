@@ -47,36 +47,36 @@ export default function NameYourSpirit({ value, onChange, onDone }: Props) {
   };
 
   return (
-    <div className="name-root">
-      <div className="name-bg" />
+    <div className="flex-1 flex flex-col bg-[#f4f7fa] relative overflow-hidden">
+      {/* Sky gradient */}
+      <div className="absolute top-0 left-0 w-full h-36 bg-linear-to-b from-[#e0e8f5] to-transparent z-0" />
+      <div className="absolute top-6 left-6 w-14 h-5 bg-white rounded-full opacity-60 blur-[1px]" />
+      <div className="absolute top-12 right-8 w-18 h-5 bg-white rounded-full opacity-50 blur-[1px]" />
 
       {/* Floating leaves */}
-      {[...Array(8)].map((_, i) => (
-        <span
-          key={i}
-          className="leaf"
-          style={{ "--i": i } as React.CSSProperties}
-        >
-          🍃
-        </span>
+      {[...Array(6)].map((_, i) => (
+        <span key={i} className="leaf" style={{ "--i": i } as React.CSSProperties}>🍃</span>
       ))}
 
-      <div className="name-content">
-        <div className="name-plant">
-          <span className="name-plant-emoji">🌱</span>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-5 relative z-10">
+        {/* Plant */}
+        <div className="name-plant relative flex items-center justify-center">
           <div className="name-glow" />
+          <span className="name-plant-emoji">🌱</span>
         </div>
 
-        <div className="name-text">
-          <h2 className="name-title">Name Your Spirit</h2>
-          <p className="name-desc">
-            Your Wisp Spirit is a living plant NFT that evolves with your eco journey. Give it a name — it's yours forever.
+        {/* Text */}
+        <div className="text-center space-y-1.5">
+          <h2 className="text-2xl font-bold text-[#3b415a] tracking-tight">Name Your Spirit</h2>
+          <p className="text-sm text-slate-500 leading-relaxed max-w-65 mx-auto">
+            Your Wisp Spirit is a living plant NFT that evolves with your eco journey. Give it a name — it&#39;s yours forever.
           </p>
         </div>
 
-        <div className={`name-input-wrap ${shake ? "shake" : ""}`}>
+        {/* Input */}
+        <div className={`w-full relative ${shake ? "shake" : ""}`}>
           <input
-            className="name-input"
+            className="w-full bg-white border-2 border-emerald-200 focus:border-emerald-400 rounded-2xl px-4 py-3.5 pr-12 text-[#3b415a] text-sm font-medium placeholder:text-slate-400 outline-none transition shadow-[0_2px_12px_rgba(0,0,0,0.05)]"
             type="text"
             maxLength={20}
             placeholder="e.g. Fernsby, Gaia, Sprout…"
@@ -85,168 +85,31 @@ export default function NameYourSpirit({ value, onChange, onDone }: Props) {
             autoFocus
             disabled={isSaving}
           />
-          <span className="name-char">{value.length}/20</span>
+          <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">
+            {value.length}/20
+          </span>
         </div>
 
-        <button 
-          className="name-btn" 
+        {/* CTA */}
+        <button
           onClick={handleContinue}
           disabled={isSaving}
+          className="w-full py-3.5 rounded-2xl font-bold text-sm bg-emerald-500 text-white hover:bg-emerald-600 transition disabled:opacity-50 shadow-[0_4px_20px_rgba(52,211,153,.35)]"
         >
-          {isSaving ? "Saving..." : "Continue →"}
+          {isSaving ? "Saving…" : "Continue →"}
         </button>
       </div>
 
       <style>{`
-        .name-root {
-          position: fixed;
-          inset: 0;
-          background: linear-gradient(160deg, #071a0f 0%, #081c16 55%, #0a1a2e 100%);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-        }
-        .name-bg {
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(ellipse 60% 40% at 50% 0%, rgba(52,211,153,.14) 0%, transparent 65%),
-            radial-gradient(ellipse 40% 30% at 80% 90%, rgba(16,185,129,.1) 0%, transparent 60%);
-          pointer-events: none;
-        }
-        .leaf {
-          position: absolute;
-          font-size: 1.4rem;
-          animation: drift calc(6s + var(--i) * 1.2s) ease-in-out infinite;
-          animation-delay: calc(var(--i) * -1.5s);
-          left: calc(var(--i) * 13%);
-          top: -2rem;
-          opacity: 0;
-          user-select: none;
-          pointer-events: none;
-        }
-        @keyframes drift {
-          0%   { transform: translateY(-20px) rotate(0deg); opacity: 0; }
-          15%  { opacity: .7; }
-          100% { transform: translateY(110vh) rotate(200deg); opacity: 0; }
-        }
-        .name-content {
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 1.75rem;
-          padding: 2rem;
-          max-width: 400px;
-          width: 100%;
-          animation: fade-up .5s ease both;
-        }
-        @keyframes fade-up {
-          from { opacity: 0; transform: translateY(28px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .name-plant {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .name-plant-emoji {
-          font-size: 6rem;
-          line-height: 1;
-          filter: drop-shadow(0 0 24px rgba(52,211,153,.6));
-          animation: grow 3s ease-in-out infinite;
-          position: relative;
-          z-index: 1;
-        }
-        @keyframes grow {
-          0%, 100% { transform: scale(1) rotate(-3deg); }
-          50%       { transform: scale(1.08) rotate(3deg); }
-        }
-        .name-glow {
-          position: absolute;
-          width: 140px;
-          height: 140px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(52,211,153,.25) 0%, transparent 70%);
-          animation: pulse-glow 2.5s ease-in-out infinite;
-        }
-        @keyframes pulse-glow {
-          0%, 100% { transform: scale(1); opacity: .7; }
-          50%       { transform: scale(1.2); opacity: 1; }
-        }
-        .name-text {
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          gap: .6rem;
-        }
-        .name-title {
-          font-size: 1.8rem;
-          font-weight: 800;
-          color: #ecfdf5;
-          margin: 0;
-          letter-spacing: -.02em;
-        }
-        .name-desc {
-          font-size: .9rem;
-          color: rgba(167,243,208,.7);
-          margin: 0;
-          line-height: 1.6;
-        }
-        .name-input-wrap {
-          width: 100%;
-          position: relative;
-        }
-        .name-input {
-          width: 100%;
-          background: rgba(255,255,255,.07);
-          border: 1.5px solid rgba(52,211,153,.3);
-          border-radius: 16px;
-          padding: 1rem 3rem 1rem 1.25rem;
-          color: #ecfdf5;
-          font-size: 1.05rem;
-          outline: none;
-          transition: border-color .2s;
-          box-sizing: border-box;
-          font-family: inherit;
-        }
-        .name-input::placeholder { color: rgba(167,243,208,.4); }
-        .name-input:focus { border-color: #34d399; box-shadow: 0 0 0 3px rgba(52,211,153,.15); }
-        .name-char {
-          position: absolute;
-          right: 1rem;
-          top: 50%;
-          transform: translateY(-50%);
-          font-size: .75rem;
-          color: rgba(167,243,208,.45);
-        }
-        .shake {
-          animation: shake .45s cubic-bezier(.36,.07,.19,.97) both;
-        }
-        @keyframes shake {
-          10%, 90% { transform: translateX(-2px); }
-          20%, 80% { transform: translateX(4px); }
-          30%, 50%, 70% { transform: translateX(-6px); }
-          40%, 60% { transform: translateX(6px); }
-        }
-        .name-btn {
-          width: 100%;
-          padding: .95rem;
-          border: none;
-          border-radius: 999px;
-          background: linear-gradient(135deg, #34d399, #059669);
-          color: #022c22;
-          font-size: 1rem;
-          font-weight: 700;
-          cursor: pointer;
-          box-shadow: 0 4px 24px rgba(52,211,153,.4);
-          transition: transform .15s, box-shadow .15s;
-        }
-        .name-btn:active { transform: scale(.97); }
-        .name-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .leaf { position: absolute; font-size: 1.2rem; animation: drift calc(6s + var(--i) * 1.2s) ease-in-out infinite; animation-delay: calc(var(--i) * -1.5s); left: calc(var(--i) * 18%); top: -2rem; opacity: 0; pointer-events: none; user-select: none; }
+        @keyframes drift { 0% { transform: translateY(-20px) rotate(0deg); opacity: 0; } 15% { opacity: .6; } 100% { transform: translateY(110%) rotate(200deg); opacity: 0; } }
+        .name-plant { }
+        .name-plant-emoji { font-size: 5rem; line-height: 1; filter: drop-shadow(0 0 18px rgba(52,211,153,.5)); animation: grow 3s ease-in-out infinite; position: relative; z-index: 1; }
+        @keyframes grow { 0%, 100% { transform: scale(1) rotate(-3deg); } 50% { transform: scale(1.07) rotate(3deg); } }
+        .name-glow { position: absolute; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, rgba(52,211,153,.2) 0%, transparent 70%); animation: pulse-glow 2.5s ease-in-out infinite; }
+        @keyframes pulse-glow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        .shake { animation: shake .45s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-6px); } 40%, 60% { transform: translateX(6px); } }
       `}</style>
     </div>
   );

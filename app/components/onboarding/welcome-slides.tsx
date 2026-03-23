@@ -3,234 +3,125 @@
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 
-const slides = [
-  {
-    emoji: "🌱",
-    bg: "linear-gradient(160deg, #0d2818 0%, #071a0f 60%, #050d0a 100%)",
-    glow: "rgba(52,211,153,.22)",
-    accent: "#34d399",
-    dark: "#022c22",
-    title: "Meet Your Wisp Spirit",
-    body: "Your Spirit is a living plant NFT that grows as you build eco-habits. Miss a day and it begins to wilt — come back and watch it bloom again.",
-  },
-  {
-    emoji: "🔒",
-    bg: "linear-gradient(160deg, #1e1654 0%, #0f0c2e 60%, #050508 100%)",
-    glow: "rgba(129,140,248,.22)",
-    accent: "#818cf8",
-    dark: "#1e1b4b",
-    title: "Zero-Knowledge Privacy",
-    body: "Verify your green actions locally on your device. Your raw data — receipts, energy readings, transit tickets — never leaves your phone.",
-  },
-  {
-    emoji: "💰",
-    bg: "linear-gradient(160deg, #271a00 0%, #1a1000 60%, #050300 100%)",
-    glow: "rgba(251,191,36,.22)",
-    accent: "#fbbf24",
-    dark: "#451a03",
-    title: "Earn Real $WISP Tokens",
-    body: "Every verified eco-action earns you $WISP — Hedera tokens redeemable at local partner merchants. Real rewards for real habits.",
-  },
-];
-
-interface Props {
+interface WelcomeSlidesProps {
   onDone: () => void;
 }
 
-export default function WelcomeSlides({ onDone }: Props) {
-  const [idx, setIdx] = useState(0);
+const slides = [
+  {
+    emoji: "\U0001f333",
+    accent: "#6ee7b7",
+    accentLight: "#d1fae5",
+    accentBorder: "#a7f3d0",
+    title: "Track Your Green Actions",
+    body: "Connect transit, energy, and grocery data. Wisp logs every eco-action automatically — no manual entry needed.",
+  },
+  {
+    emoji: "\U0001f6e1\ufe0f",
+    accent: "#818cf8",
+    accentLight: "#ede9fe",
+    accentBorder: "#c4b5fd",
+    title: "Privacy by Design",
+    body: "Zero-knowledge proofs verify your actions without exposing personal data. Your habits stay yours.",
+  },
+  {
+    emoji: "\u2728",
+    accent: "#fbbf24",
+    accentLight: "#fef3c7",
+    accentBorder: "#fde68a",
+    title: "Earn Real $WISP Tokens",
+    body: "Every verified eco-action earns you $WISP — Hedera tokens redeemable at partner businesses. Real rewards for real habits.",
+  },
+];
+
+export default function WelcomeSlides({ onDone }: WelcomeSlidesProps) {
+  const [index, setIndex] = useState(0);
+  const slide = slides[index];
+  const isLast = index === slides.length - 1;
 
   const next = () => {
-    if (idx < slides.length - 1) setIdx(idx + 1);
-    else onDone();
+    if (isLast) {
+      onDone();
+    } else {
+      setIndex((i) => i + 1);
+    }
   };
 
-  const s = slides[idx];
-
   return (
-    <div
-      className="slides-root"
-      style={{ background: s.bg }}
-    >
-      {/* Radial glow top */}
+    <div className="flex-1 flex flex-col bg-[#f4f7fa] overflow-hidden">
+      {/* Sky gradient */}
       <div
-        className="slides-glow"
-        style={{
-          background: `radial-gradient(ellipse 70% 55% at 50% 10%, ${s.glow} 0%, transparent 70%)`,
-        }}
+        className="absolute top-0 left-0 w-full h-[35%] z-0"
+        style={{ background: "linear-gradient(to bottom, #e0e8f5, #f4f7fa)" }}
       />
 
-      {/* Skip */}
-      {idx < slides.length - 1 && (
-        <button className="slide-skip" onClick={onDone}>
-          Skip
-        </button>
-      )}
-
-      <div className="slide-content" key={idx}>
-        {/* Illustration orb */}
+      {/* Content */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pt-10 pb-4">
+        {/* Orb */}
         <div
-          className="slide-orb"
-          style={{ boxShadow: `0 0 80px 20px ${s.glow}` }}
+          className="w-28 h-28 rounded-full flex items-center justify-center mb-7 shadow-lg border-4"
+          style={{
+            background: slide.accentLight,
+            borderColor: slide.accentBorder,
+          }}
         >
-          <span className="slide-emoji">{s.emoji}</span>
+          <span style={{ fontSize: 52, lineHeight: 1 }}>{slide.emoji}</span>
         </div>
 
-        {/* Text */}
-        <div className="slide-text">
-          <h2 className="slide-title">{s.title}</h2>
-          <p className="slide-body">{s.body}</p>
-        </div>
+        <h2
+          className="text-2xl font-black text-[#3b415a] text-center mb-3 leading-tight"
+          style={{ animation: "fade-in 0.5s ease both" }}
+        >
+          {slide.title}
+        </h2>
+        <p
+          className="text-sm text-slate-400 font-medium text-center leading-relaxed max-w-xs"
+          style={{ animation: "fade-in 0.5s ease 0.1s both" }}
+        >
+          {slide.body}
+        </p>
+      </div>
 
-        {/* Dots */}
-        <div className="slide-dots">
+      {/* Dots + Button */}
+      <div className="relative z-10 px-6 pb-8 flex flex-col items-center gap-5">
+        <div className="flex gap-2">
           {slides.map((_, i) => (
-            <button
+            <div
               key={i}
-              className="dot"
+              className="rounded-full transition-all duration-300"
               style={{
-                width: i === idx ? "24px" : "8px",
-                background: i === idx ? s.accent : "rgba(255,255,255,.25)",
+                width: i === index ? 20 : 8,
+                height: 8,
+                background: i === index ? slide.accent : "#cbd5e1",
               }}
-              onClick={() => setIdx(i)}
             />
           ))}
         </div>
 
-        {/* CTA */}
         <button
-          className="slide-btn"
-          style={{ background: s.accent, color: s.dark }}
           onClick={next}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-bold text-sm shadow-lg transition-opacity hover:opacity-90 active:scale-95"
+          style={{ background: slide.accent }}
         >
-          {idx < slides.length - 1 ? (
-            <>
-              Next <ChevronRight size={18} />
-            </>
-          ) : (
-            "Get Started 🌿"
-          )}
+          {isLast ? "Get Started" : "Next"}
+          <ChevronRight className="w-4 h-4" />
         </button>
+
+        {!isLast && (
+          <button
+            onClick={onDone}
+            className="text-xs text-slate-400 font-semibold hover:text-slate-600 transition-colors"
+          >
+            Skip intro
+          </button>
+        )}
       </div>
 
       <style>{`
-        .slides-root {
-          position: fixed;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        .slides-glow {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-        }
-        .slide-skip {
-          position: absolute;
-          top: 2.5rem;
-          right: 1.5rem;
-          background: rgba(255,255,255,.12);
-          border: 1px solid rgba(255,255,255,.2);
-          color: rgba(255,255,255,.75);
-          padding: .4rem 1rem;
-          border-radius: 999px;
-          font-size: .85rem;
-          cursor: pointer;
-          backdrop-filter: blur(8px);
-          z-index: 10;
-          font-family: inherit;
-        }
-        .slide-content {
-          position: relative;
-          z-index: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 2rem 2rem 4rem;
-          gap: 2.25rem;
-          max-width: 420px;
-          width: 100%;
-          animation: slide-in .4s cubic-bezier(.4,0,.2,1) both;
-        }
-        @keyframes slide-in {
-          from { opacity: 0; transform: translateX(32px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        .slide-orb {
-          width: 190px;
-          height: 190px;
-          border-radius: 50%;
-          background: radial-gradient(circle at 38% 32%, rgba(255,255,255,.15), rgba(0,0,0,.25));
-          border: 1.5px solid rgba(255,255,255,.12);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          backdrop-filter: blur(8px);
-          flex-shrink: 0;
-        }
-        .slide-emoji {
-          font-size: 5.5rem;
-          line-height: 1;
-          animation: bob 3s ease-in-out infinite;
-          display: block;
-        }
-        @keyframes bob {
-          0%, 100% { transform: translateY(0); }
-          50%       { transform: translateY(-10px); }
-        }
-        .slide-text {
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          gap: .75rem;
-        }
-        .slide-title {
-          font-size: 1.8rem;
-          font-weight: 800;
-          color: #ffffff;
-          margin: 0;
-          letter-spacing: -.02em;
-          line-height: 1.2;
-        }
-        .slide-body {
-          font-size: 1rem;
-          color: rgba(255,255,255,.65);
-          margin: 0;
-          line-height: 1.65;
-        }
-        .slide-dots {
-          display: flex;
-          gap: 6px;
-          align-items: center;
-        }
-        .dot {
-          height: 8px;
-          border-radius: 999px;
-          border: none;
-          cursor: pointer;
-          transition: width .3s ease, background .3s ease;
-          padding: 0;
-        }
-        .slide-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: .45rem;
-          padding: 1rem 2rem;
-          border: none;
-          border-radius: 999px;
-          font-size: 1rem;
-          font-weight: 700;
-          cursor: pointer;
-          transition: transform .15s, box-shadow .15s;
-          box-shadow: 0 4px 24px rgba(0,0,0,.5);
-          width: 100%;
-          font-family: inherit;
-        }
-        .slide-btn:active { transform: scale(.97); }
       `}</style>
     </div>
   );

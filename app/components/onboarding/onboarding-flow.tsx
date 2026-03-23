@@ -16,24 +16,24 @@ export default function OnboardingFlow() {
   const router = useRouter();
 
   const goTo = (s: OnboardingStep) => setStep(s);
+  const finish = () => router.push("/home");
 
-  const finish = () => {
-    router.push("/home");
-  };
-
-  if (step === "splash") return <SplashScreen onDone={() => goTo("slides")} />;
-  if (step === "slides") return <WelcomeSlides onDone={() => goTo("login")} />;
-  if (step === "login") return <LoginScreen onDone={() => goTo("name")} />;
-  
-  if (step === "name")
-    return (
-      <NameYourSpirit
-        value={spiritName}
-        onChange={setSpiritName}
-        onDone={() => goTo("mood")}
-      />
-    );
-  if (step === "mood") return <MoodCheckIn onDone={finish} />;
-
-  return null;
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-slate-900 font-sans p-4 sm:p-8">
+      {/* Mobile Device Mockup — same shell as home/adventures/profile */}
+      <div className="relative w-full max-w-100 h-212.5 bg-[#f4f7fa] rounded-[3rem] shadow-2xl overflow-hidden border-8 border-slate-800 flex flex-col">
+        {step === "splash" && <SplashScreen onDone={() => goTo("slides")} />}
+        {step === "slides" && <WelcomeSlides onDone={() => goTo("login")} />}
+        {step === "login"  && <LoginScreen  onDone={() => goTo("name")}   />}
+        {step === "name"   && (
+          <NameYourSpirit
+            value={spiritName}
+            onChange={setSpiritName}
+            onDone={() => goTo("mood")}
+          />
+        )}
+        {step === "mood" && <MoodCheckIn onDone={finish} />}
+      </div>
+    </div>
+  );
 }
