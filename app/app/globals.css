@@ -122,8 +122,12 @@
     }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
     }
   html {
     @apply font-sans;
+    }
+  html, body {
+    min-height: 100dvh;
     }
 }

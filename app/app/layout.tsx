@@ -2,21 +2,19 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
-import { BottomNav } from "@/components/bottom-nav";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "Hedera App",
-  description: "Next.js PWA App",
+  title: "Wisp — The Privacy-First Eco-Companion",
+  description: "Grow your Wisp Spirit and earn $WISP tokens by building daily eco-habits.",
   manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: "#0d1f14",
 };
 
 export default function RootLayout({
@@ -30,11 +28,8 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("antialiased", fontMono.variable, "font-sans", geist.variable)}
     >
-      <body className="pb-16 sm:pb-0">
-        <ThemeProvider>
-          {children}
-          <BottomNav />
-        </ThemeProvider>
+      <body>
+        {children}
       </body>
     </html>
   );
