@@ -1,4 +1,5 @@
 const { query } = require('../db/pool');
+const crypto = require('crypto');
 const { calculateWispReward } = require('../lib/rewards');
 const { getActionXp, calculateLevel, updateQuestProgress } = require('../lib/gameLogic');
 const { verifyTicketWithOpenRouter } = require('../lib/ticketPhotoVerifier');
@@ -186,6 +187,89 @@ async function submitTicketPhotoAction(req, res, next) {
 }
 
 /**
+ * POST /api/actions/manual
+ * Manual in-app verification for non-ticket actions (energy, food, etc.).
+ */
+async function submitManualAction(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { category } = req.body;
+
+    const ALLOWED_CATEGORIES = new Set([
+      'energy_reduction',
+      'plant_based_food',
+      'thrift_purchase',
+      'carbon_offset',
+    ]);
+
+    if (!ALLOWED_CATEGORIES.has(category)) {
+      return res.status(400).json({ error: 'Unsupported category for manual verification' });
+    }
+
+    const existingToday = await query(
+      `SELECT id
+       FROM actions
+       WHERE user_id = $1
+         AND category = $2
+         AND submitted_at::date = CURRENT_DATE
+       LIMIT 1`,
+      [userId, category]
+    );
+
+    if (existingToday.rows.length) {
+      return res.status(409).json({ error: 'This action was already verified today' });
+    }
+
+    const daySequence = await getDaySequenceForUser(userId);
+    const proofHash = crypto
+      .createHash('sha256')
+      .update(`${userId}:${category}:${Date.now()}:${Math.random()}`)
+      .digest('hex');
+
+    const wispEarned = calculateWispReward(category, daySequence);
+    const xpEarned = getActionXp(category);
+
+    const actionInsert = await query(
+      `INSERT INTO actions
+         (user_id, category, proof_hash, hcs_topic_id, hcs_sequence_number, day_sequence, wisp_earned, xp_earned)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [userId, category, proofHash, null, null, daySequence, wispEarned, xpEarned]
+    );
+
+    const userUpdate = await query(
+      `UPDATE users
+       SET experience = experience + $1,
+           gold = gold + $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING experience, level`,
+      [xpEarned, wispEarned, userId]
+    );
+
+    const { experience, level: oldLevel } = userUpdate.rows[0];
+    const newLevel = calculateLevel(experience);
+    if (newLevel > oldLevel) {
+      await query('UPDATE users SET level = $1 WHERE id = $2', [newLevel, userId]);
+    }
+
+    await updateStreak(userId, daySequence, xpEarned);
+    await updateQuestProgress(query, userId, category);
+
+    return res.status(201).json({
+      action: actionInsert.rows[0],
+      reward: {
+        wispEarned,
+        xpEarned,
+      },
+      levelUp: newLevel > oldLevel ? newLevel : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/actions
  */
 async function getActions(req, res, next) {
@@ -270,4 +354,10 @@ function round8(value) {
   return Math.round(value * 1e8) / 1e8;
 }
 
-module.exports = { submitAction, submitTicketPhotoAction, getActions, getActionById };
+module.exports = {
+  submitAction,
+  submitTicketPhotoAction,
+  submitManualAction,
+  getActions,
+  getActionById,
+};

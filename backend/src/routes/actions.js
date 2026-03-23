@@ -6,6 +6,7 @@ const { actionsLimiter } = require('../middleware/rateLimiter');
 const {
   submitAction,
   submitTicketPhotoAction,
+  submitManualAction,
   getActions,
   getActionById,
 } = require('../controllers/actionsController');
@@ -29,6 +30,21 @@ router.post(
   ],
   validate,
   submitTicketPhotoAction
+);
+
+/**
+ * POST /api/actions/manual
+ * Manual verification for non-ticket green actions.
+ */
+router.post(
+  '/manual',
+  authenticate,
+  actionsLimiter,
+  [
+    body('category').isString().notEmpty().withMessage('category is required'),
+  ],
+  validate,
+  submitManualAction
 );
 
 /**
