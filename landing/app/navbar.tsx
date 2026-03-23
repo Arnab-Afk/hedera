@@ -46,7 +46,9 @@ export default function Navbar() {
             : 'none',
           border:        scrolled ? '1px solid rgba(74,103,65,0.12)' : 'none',
           borderBottom:  scrolled ? 'none' : '1px solid rgba(184,177,165,0.15)',
-          padding:       scrolled ? '0.8rem 1.8rem' : '1.35rem 3rem',
+          padding:       scrolled ? '0.8rem 1.2rem' : '1rem 1.25rem',
+          paddingLeft:   scrolled ? '1.8rem' : 'clamp(1rem, 5vw, 3rem)',
+          paddingRight:  scrolled ? '1.8rem' : 'clamp(1rem, 5vw, 3rem)',
           display:       'flex',
           alignItems:    'center',
           justifyContent:'space-between',
@@ -99,14 +101,15 @@ export default function Navbar() {
 
         {/* CTA */}
           <a
-          href="/app"
+          href="https://app.wisp3.xyz/"
           className="bg-primary text-on-primary font-lexend uppercase font-bold tracking-widest hover:bg-primary-dim active:scale-95 transition-colors duration-200"
           style={{
-            fontSize:    '0.7rem',
-            padding:     scrolled ? '0.5rem 1.25rem' : '0.55rem 1.5rem',
+            fontSize:    '0.65rem',
+            padding:     scrolled ? '0.45rem 1rem' : '0.5rem 1.15rem',
             borderRadius:'9999px',
             flexShrink:  0,
             transition:  'padding 0.5s cubic-bezier(0.4,0,0.2,1)',
+            whiteSpace:  'nowrap',
           }}
         >
           Launch App

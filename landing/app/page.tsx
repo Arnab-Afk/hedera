@@ -65,7 +65,7 @@ export default function Home() {
           </div>
 
           {/* ── Two-column hero layout ── */}
-          <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-12 py-36 lg:py-0 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center min-h-screen">
+          <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-12 py-24 lg:py-0 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center min-h-screen">
 
             {/* Left: Text */}
             <div>
@@ -99,12 +99,16 @@ export default function Home() {
                 className="mt-10 flex flex-wrap gap-4 animate-fade-up"
                 style={{ animationDelay: '0.6s' }}
               >
-                <button className="px-8 py-4 bg-primary text-on-primary rounded-full font-headline font-bold uppercase tracking-widest text-sm hover:bg-primary-dim hover:scale-105 transition-all duration-200">
+                <a
+                  href="https://app.wisp3.xyz/"
+                  target="_blank" rel="noopener noreferrer"
+                  className="px-6 py-3 md:px-8 md:py-4 bg-primary text-on-primary rounded-full font-headline font-bold uppercase tracking-widest text-sm hover:bg-primary-dim hover:scale-105 transition-all duration-200 text-center"
+                >
                   Start Earning
-                </button>
+                </a>
                 <a
                   href="#how-it-works"
-                  className="px-8 py-4 border border-outline/20 text-on-surface rounded-full font-headline font-bold uppercase tracking-widest text-sm hover:bg-surface-container transition-colors duration-200"
+                  className="px-6 py-3 md:px-8 md:py-4 border border-outline/20 text-on-surface rounded-full font-headline font-bold uppercase tracking-widest text-sm hover:bg-surface-container transition-colors duration-200"
                 >
                   See How It Works
                 </a>
@@ -183,7 +187,7 @@ export default function Home() {
         </section>
 
         {/* ── Features ──────────────────────────────── */}
-        <section id="features" className="py-32 px-6">
+        <section id="features" className="py-20 md:py-32 px-6">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center gap-4 mb-6">
               <span className="w-8 h-px bg-primary" />
@@ -244,7 +248,7 @@ export default function Home() {
         </section>
 
         {/* ── How It Works ──────────────────────────── */}
-        <section id="how-it-works" className="py-32 px-6 bg-surface-container-low">
+        <section id="how-it-works" className="py-20 md:py-32 px-6 bg-surface-container-low">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center gap-4 mb-6">
               <span className="w-8 h-px bg-primary" />
@@ -254,7 +258,7 @@ export default function Home() {
               Three steps, real change
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-10 justify-items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 justify-items-center">
               {[
                 {
                   step: '01',
@@ -284,7 +288,7 @@ export default function Home() {
                 <div key={step.step} className="flex flex-col items-center gap-5">
                   {/* Fixed-size blob with overflow-hidden so text never escapes */}
                   <div
-                    className={`w-72 h-72 ${step.shape} ${step.bg} overflow-hidden flex flex-col items-center justify-center text-center p-10 gap-3 border border-outline-variant/10 shadow-sm hover:scale-105 transition-transform duration-500`}
+                    className={`w-52 h-52 sm:w-64 sm:h-64 md:w-72 md:h-72 ${step.shape} ${step.bg} overflow-hidden flex flex-col items-center justify-center text-center p-6 sm:p-10 gap-3 border border-outline-variant/10 shadow-sm hover:scale-105 transition-transform duration-500`}
                   >
                     <span className="font-headline font-black text-5xl text-primary/20 leading-none">{step.step}</span>
                     <span className="material-symbols-outlined text-primary text-2xl">{step.icon}</span>
@@ -300,7 +304,7 @@ export default function Home() {
         </section>
 
         {/* ── Tokenomics ────────────────────────────── */}
-        <section id="tokenomics" className="py-32 px-6">
+        <section id="tokenomics" className="py-20 md:py-32 px-6">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center gap-4 mb-6">
               <span className="w-8 h-px bg-primary" />
@@ -398,9 +402,9 @@ export default function Home() {
         </section>
 
         {/* ── Team ──────────────────────────────────── */}
-        <section className="py-32 px-6 bg-surface-container-low">
+        <section className="py-20 md:py-32 px-6 bg-surface-container-low">
           <div className="max-w-6xl mx-auto">
-            <div className="flex justify-between items-end mb-20">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 md:mb-20 gap-4">
               <div>
                 <div className="flex items-center gap-4 mb-4">
                   <span className="w-8 h-px bg-primary" />
@@ -416,7 +420,7 @@ export default function Home() {
                 Est. 2026
               </p>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 justify-items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 justify-items-center">
               {[
                 {
                   quote: '"If we\'re fighting climate change, our infrastructure can\'t add to it."',
@@ -454,9 +458,9 @@ export default function Home() {
                 <div key={t.name} className={`flex flex-col items-center gap-4 ${t.offset}`}>
                   {/* Blob quote card */}
                   <div
-                    className={`w-64 h-64 ${t.shape} ${t.bg} overflow-hidden flex items-center justify-center text-center p-10 border border-outline-variant/10 shadow-sm hover:scale-105 transition-transform duration-500`}
+                    className={`w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 ${t.shape} ${t.bg} overflow-hidden flex items-center justify-center text-center p-6 sm:p-10 border border-outline-variant/10 shadow-sm hover:scale-105 transition-transform duration-500`}
                   >
-                    <p className="text-base italic text-on-surface leading-relaxed">{t.quote}</p>
+                    <p className="text-xs sm:text-sm md:text-base italic text-on-surface leading-relaxed">{t.quote}</p>
                   </div>
                   <div className="text-center">
                     <div className="h-px w-8 bg-outline-variant/30 mx-auto mb-2" />
@@ -471,7 +475,7 @@ export default function Home() {
 
         {/* ── Combined Blue CTA ──────────────────────── */}
         <section className="px-6 md:px-20 mb-20 pt-20">
-          <div className="max-w-6xl mx-auto rounded-[3rem] py-20 px-12 md:px-20" style={{ background: '#c8daf4' }}>
+          <div className="max-w-6xl mx-auto rounded-[2rem] md:rounded-[3rem] py-12 md:py-20 px-6 sm:px-10 md:px-20" style={{ background: '#c8daf4' }}>
             <h2
               className="font-headline font-black uppercase leading-none mb-16"
               style={{ color: '#1e3a5f', fontSize: 'clamp(2.8rem, 7vw, 5.5rem)', letterSpacing: '-0.02em' }}
@@ -496,7 +500,9 @@ export default function Home() {
             <div className="h-px mb-12" style={{ background: 'rgba(30,58,95,0.12)' }} />
             <div className="flex flex-wrap gap-4">
               <a
-                href="/app"
+                href="https://app.wisp3.xyz/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="px-8 py-4 rounded-full font-headline font-bold uppercase tracking-widest text-sm hover:scale-105 transition-transform inline-block"
                 style={{ background: '#1e3a5f', color: '#c8daf4' }}
               >
@@ -519,7 +525,7 @@ export default function Home() {
       <footer className="w-full bg-surface-container border-t border-stone-400/10 overflow-hidden">
 
         {/* Top: tagline | links col 1 | links col 2 + socials */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 px-10 md:px-16 pt-16 pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 px-6 md:px-16 pt-12 md:pt-16 pb-4">
           <p className="font-lexend text-base text-stone-500 leading-snug">
             Go green.<br />Stay private.<br />Get rewarded.
           </p>
