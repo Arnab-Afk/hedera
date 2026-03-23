@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-on-tertiary: #fff8eb;
+  --color-inverse-surface: #100e0a;
+  --color-on-tertiary-container: #605100;
+  --color-on-tertiary-fixed-variant: #6a5b0b;
+  --color-primary-fixed-dim: #bcdeaf;
+  --color-outline-variant: #b9b1a5;
+  --color-tertiary-dim: #615201;
+  --color-on-secondary-fixed-variant: #3f5e7a;
+  --color-surface-tint: #4a6741;
+  --color-tertiary-fixed: #f8e287;
+  --color-on-background: #363229;
+  --color-inverse-primary: #d8fbca;
+  --color-on-tertiary-fixed: #4b3f00;
+  --color-error-container: #fa7150;
+  --color-on-error-container: #671200;
+  --color-tertiary-container: #f8e287;
+  --color-secondary-fixed-dim: #b8d8f8;
+  --color-on-primary-fixed: #2b4623;
+  --color-primary-container: #caecbc;
+  --color-tertiary-fixed-dim: #ead47b;
+  --color-surface-bright: #fff8f1;
+  --color-on-primary: #ebffdf;
+  --color-surface: #fff8f1;
+  --color-secondary-container: #cde5ff;
+  --color-inverse-on-surface: #a19c95;
+  --color-error: #aa371c;
+  --color-on-error: #fff7f6;
+  --color-error-dim: #821a01;
+  --color-surface-container: #f5ede2;
+  --color-primary-dim: #3e5a36;
+  --color-primary: #4a6741;
+  --color-background: #fff8f1;
+  --color-on-secondary: #f6f9ff;
+  --color-on-primary-fixed-variant: #46633d;
+  --color-secondary-dim: #365671;
+  --color-on-secondary-container: #355570;
+  --color-surface-container-high: #efe7db;
+  --color-secondary-fixed: #cde5ff;
+  --color-on-secondary-fixed: #21425c;
+  --color-surface-container-lowest: #ffffff;
+  --color-secondary: #43627e;
+  --color-on-surface-variant: #645e54;
+  --color-on-primary-container: #3d5934;
+  --color-primary-fixed: #caecbc;
+  --color-tertiary: #6e5e10;
+  --color-surface-dim: #e2d9cb;
+  --color-surface-variant: #eae1d5;
+  --color-surface-container-highest: #eae1d5;
+  --color-outline: #807a6f;
+  --color-surface-container-low: #faf2e9;
+  --color-on-surface: #363229;
+
+  /* Fonts */
+  --font-headline: "Lexend", sans-serif;
+  --font-body: "Lexend", sans-serif;
+  --font-label: "Lexend", sans-serif;
+  --font-lexend: "Lexend", sans-serif;
+
+  /* Border radius */
+  --radius: 1rem;
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+  --radius-full: 9999px;
+}
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+/* Ticker tape */
+.ticker-wrap {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ticker-move {
+  display: inline-block;
+  animation: ticker 30s linear infinite;
+}
+@keyframes ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+body {
+  background-color: #fff8f1;
+  color: #363229;
+}
