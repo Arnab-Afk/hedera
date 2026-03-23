@@ -47,8 +47,18 @@ function safeJsonParse(raw) {
     return JSON.parse(raw);
   } catch {
     const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    if (!fenced) throw new Error('Model did not return valid JSON');
-    return JSON.parse(fenced[1]);
+    if (fenced) {
+      return JSON.parse(fenced[1]);
+    }
+
+    // Fallback: extract the first top-level JSON object from plain text.
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start !== -1 && end > start) {
+      return JSON.parse(raw.slice(start, end + 1));
+    }
+
+    throw new Error('Model did not return valid JSON');
   }
 }
 
@@ -135,7 +145,6 @@ async function verifyTicketWithOpenRouter({ imageDataUrl }) {
           ],
         },
       ],
-      response_format: { type: 'json_object' },
       temperature: 0,
     }),
   });
