@@ -5,6 +5,8 @@ const { getActionXp, calculateLevel, updateQuestProgress } = require('../lib/gam
 const { verifyTicketWithOpenRouter } = require('../lib/ticketPhotoVerifier');
 const { verifyElectricityBillWithAI } = require('../lib/electricityBillVerifier');
 const { verifyScreenTimeScreenshotWithAI } = require('../lib/screenTimeVerifier');
+const { verifyPlantMealWithAI } = require('../lib/plantMealVerifier');
+const { verifyRecyclingPhotoWithAI } = require('../lib/recyclingPhotoVerifier');
 
 /**
  * POST /api/actions
@@ -473,6 +475,190 @@ async function submitScreenTimeAction(req, res, next) {
 }
 
 /**
+ * POST /api/actions/meal-photo
+ * Upload plant-based meal photo, verify with AI, and credit rewards.
+ */
+async function submitPlantMealAction(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { imageDataUrl } = req.body;
+
+    const meal = await verifyPlantMealWithAI({ imageDataUrl });
+
+    if (!meal.isPlantBasedMeal || meal.confidence < 0.4) {
+      return res.status(422).json({
+        error: 'Could not verify a plant-based meal from the uploaded photo',
+        verification: {
+          confidence: meal.confidence,
+          reasoning: meal.reasoning,
+        },
+      });
+    }
+
+    const existingToday = await query(
+      `SELECT id
+       FROM actions
+       WHERE user_id = $1
+         AND category = 'plant_based_food'
+         AND submitted_at::date = CURRENT_DATE
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (existingToday.rows.length) {
+      return res.status(409).json({ error: 'Plant-based meal already submitted today' });
+    }
+
+    const daySequence = await getDaySequenceForUser(userId);
+    const category = 'plant_based_food';
+    const proofHash = `meal:${new Date().toISOString().slice(0, 10)}:${meal.dishName.toLowerCase()}`;
+
+    const baseWisp = calculateWispReward(category, daySequence);
+    const impactBonus = 1 + Math.min(0.8, meal.estimatedCo2SavedKg / 2);
+    const wispEarned = round8(baseWisp * impactBonus);
+
+    const baseXp = getActionXp(category);
+    const xpEarned = baseXp + Math.min(15, Math.round(meal.estimatedCo2SavedKg * 10));
+
+    const actionInsert = await query(
+      `INSERT INTO actions
+         (user_id, category, proof_hash, hcs_topic_id, hcs_sequence_number, day_sequence, wisp_earned, xp_earned)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [userId, category, proofHash, null, null, daySequence, wispEarned, xpEarned]
+    );
+
+    const userUpdate = await query(
+      `UPDATE users
+       SET experience = experience + $1,
+           gold = gold + $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING experience, level`,
+      [xpEarned, wispEarned, userId]
+    );
+
+    const { experience, level: oldLevel } = userUpdate.rows[0];
+    const newLevel = calculateLevel(experience);
+    if (newLevel > oldLevel) {
+      await query('UPDATE users SET level = $1 WHERE id = $2', [newLevel, userId]);
+    }
+
+    await updateStreak(userId, daySequence, xpEarned);
+    await updateQuestProgress(query, userId, category);
+
+    return res.status(201).json({
+      action: actionInsert.rows[0],
+      reward: {
+        wispEarned,
+        xpEarned,
+      },
+      meal: {
+        dishName: meal.dishName,
+        estimatedCo2SavedKg: meal.estimatedCo2SavedKg,
+        confidence: meal.confidence,
+        reasoning: meal.reasoning,
+      },
+      levelUp: newLevel > oldLevel ? newLevel : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/actions/recycling-photo
+ * Upload recycling photo, verify with AI, and credit rewards.
+ */
+async function submitRecyclingPhotoAction(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { imageDataUrl } = req.body;
+
+    const recycle = await verifyRecyclingPhotoWithAI({ imageDataUrl });
+
+    if (!recycle.isRecyclingProof || recycle.confidence < 0.4) {
+      return res.status(422).json({
+        error: 'Could not verify recycling proof from the uploaded photo',
+        verification: {
+          confidence: recycle.confidence,
+          reasoning: recycle.reasoning,
+        },
+      });
+    }
+
+    const existingToday = await query(
+      `SELECT id
+       FROM actions
+       WHERE user_id = $1
+         AND category = 'recycling'
+         AND submitted_at::date = CURRENT_DATE
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (existingToday.rows.length) {
+      return res.status(409).json({ error: 'Recycling proof already submitted today' });
+    }
+
+    const daySequence = await getDaySequenceForUser(userId);
+    const category = 'recycling';
+    const proofHash = `recycle:${new Date().toISOString().slice(0, 10)}:${recycle.recyclableItemCount}`;
+
+    const baseWisp = calculateWispReward(category, daySequence);
+    const impactBonus = 1 + Math.min(0.8, recycle.estimatedWasteDivertedKg / 3);
+    const wispEarned = round8(baseWisp * impactBonus);
+
+    const baseXp = getActionXp(category);
+    const xpEarned = baseXp + Math.min(15, Math.round(recycle.estimatedWasteDivertedKg * 5));
+
+    const actionInsert = await query(
+      `INSERT INTO actions
+         (user_id, category, proof_hash, hcs_topic_id, hcs_sequence_number, day_sequence, wisp_earned, xp_earned)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [userId, category, proofHash, null, null, daySequence, wispEarned, xpEarned]
+    );
+
+    const userUpdate = await query(
+      `UPDATE users
+       SET experience = experience + $1,
+           gold = gold + $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING experience, level`,
+      [xpEarned, wispEarned, userId]
+    );
+
+    const { experience, level: oldLevel } = userUpdate.rows[0];
+    const newLevel = calculateLevel(experience);
+    if (newLevel > oldLevel) {
+      await query('UPDATE users SET level = $1 WHERE id = $2', [newLevel, userId]);
+    }
+
+    await updateStreak(userId, daySequence, xpEarned);
+    await updateQuestProgress(query, userId, category);
+
+    return res.status(201).json({
+      action: actionInsert.rows[0],
+      reward: {
+        wispEarned,
+        xpEarned,
+      },
+      recycling: {
+        recyclableItemCount: recycle.recyclableItemCount,
+        estimatedWasteDivertedKg: recycle.estimatedWasteDivertedKg,
+        confidence: recycle.confidence,
+        reasoning: recycle.reasoning,
+      },
+      levelUp: newLevel > oldLevel ? newLevel : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/actions
  */
 async function getActions(req, res, next) {
@@ -563,6 +749,8 @@ module.exports = {
   submitManualAction,
   submitElectricityBillAction,
   submitScreenTimeAction,
+  submitPlantMealAction,
+  submitRecyclingPhotoAction,
   getActions,
   getActionById,
 };

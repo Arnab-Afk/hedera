@@ -6,6 +6,7 @@ import {
   Leaf,
   Zap,
   Train,
+  Recycle,
   ShieldCheck,
   Home,
   User,
@@ -52,6 +53,14 @@ export default function HomePage() {
   const [isSubmittingScreen, setIsSubmittingScreen] = useState(false);
   const [isScreenSectionOpen, setIsScreenSectionOpen] = useState(false);
   const [screenStatus, setScreenStatus] = useState<string>("");
+  const [mealPreview, setMealPreview] = useState<string | null>(null);
+  const [isSubmittingMeal, setIsSubmittingMeal] = useState(false);
+  const [isMealSectionOpen, setIsMealSectionOpen] = useState(false);
+  const [mealStatus, setMealStatus] = useState<string>("");
+  const [recyclePreview, setRecyclePreview] = useState<string | null>(null);
+  const [isSubmittingRecycle, setIsSubmittingRecycle] = useState(false);
+  const [isRecycleSectionOpen, setIsRecycleSectionOpen] = useState(false);
+  const [recycleStatus, setRecycleStatus] = useState<string>("");
   const [verifyingCategory, setVerifyingCategory] = useState<string | null>(null);
   const [ticketStatus, setTicketStatus] = useState<string>("");
   const [wispBalance, setWispBalance] = useState(0);
@@ -81,7 +90,7 @@ export default function HomePage() {
       id: 3,
       category: "plant_based_food",
       title: "Plant Based Meal",
-      subtitle: "Ready for check-in",
+      subtitle: "Upload meal photo to verify",
       icon: Leaf,
       status: "actionable",
       xp: 12,
@@ -96,6 +105,16 @@ export default function HomePage() {
       status: "actionable",
       xp: 18,
       color: "bg-blue-500",
+    },
+    {
+      id: 5,
+      category: "recycling",
+      title: "Recycling Proof",
+      subtitle: "Upload recycling photo",
+      icon: Recycle,
+      status: "actionable",
+      xp: 10,
+      color: "bg-teal-500",
     },
   ]);
 
@@ -172,6 +191,22 @@ export default function HomePage() {
                 ...task,
                 status: "actionable" as TaskStatus,
                 subtitle: "Upload screenshot to verify",
+              };
+            }
+
+            if (task.category === "plant_based_food") {
+              return {
+                ...task,
+                status: "actionable" as TaskStatus,
+                subtitle: "Upload meal photo to verify",
+              };
+            }
+
+            if (task.category === "recycling") {
+              return {
+                ...task,
+                status: "actionable" as TaskStatus,
+                subtitle: "Upload recycling photo",
               };
             }
 
@@ -457,6 +492,148 @@ export default function HomePage() {
     }
   };
 
+  const onMealSelected = async (file: File | null) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setMealStatus("Please upload an image file.");
+      return;
+    }
+
+    const dataUrl = await toDataUrl(file);
+    setMealPreview(dataUrl);
+    setIsMealSectionOpen(true);
+    setMealStatus("");
+  };
+
+  const submitMealPhoto = async () => {
+    if (!mealPreview) {
+      setMealStatus("Upload a meal photo first.");
+      return;
+    }
+
+    if (!token) {
+      setMealStatus("Please complete login first.");
+      return;
+    }
+
+    try {
+      setIsSubmittingMeal(true);
+      setMealStatus("Analyzing meal photo...");
+
+      const res = await fetch(`${API_URL}/api/actions/meal-photo`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ imageDataUrl: mealPreview }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        setMealStatus(payload?.error || "Could not verify meal photo.");
+        return;
+      }
+
+      const xpEarned = Number(payload?.reward?.xpEarned || 0);
+      const wispEarned = Number(payload?.reward?.wispEarned || 0);
+      const dishName = String(payload?.meal?.dishName || "Plant meal");
+
+      setXp((prev) => Math.min(prev + xpEarned, 50));
+      setWispBalanceDelta((prev) => prev + wispEarned);
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.category === "plant_based_food"
+            ? {
+                ...task,
+                status: "completed" as TaskStatus,
+                subtitle: `Verified meal: ${dishName}`,
+              }
+            : task,
+        ),
+      );
+      setMealStatus(`Meal verified. +${xpEarned} XP and +${wispEarned.toFixed(4)} WISP credited.`);
+      setMealPreview(null);
+      setIsMealSectionOpen(false);
+    } catch {
+      setMealStatus("Could not submit meal right now. Please try again.");
+    } finally {
+      setIsSubmittingMeal(false);
+    }
+  };
+
+  const onRecycleSelected = async (file: File | null) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setRecycleStatus("Please upload an image file.");
+      return;
+    }
+
+    const dataUrl = await toDataUrl(file);
+    setRecyclePreview(dataUrl);
+    setIsRecycleSectionOpen(true);
+    setRecycleStatus("");
+  };
+
+  const submitRecyclingPhoto = async () => {
+    if (!recyclePreview) {
+      setRecycleStatus("Upload a recycling photo first.");
+      return;
+    }
+
+    if (!token) {
+      setRecycleStatus("Please complete login first.");
+      return;
+    }
+
+    try {
+      setIsSubmittingRecycle(true);
+      setRecycleStatus("Analyzing recycling photo...");
+
+      const res = await fetch(`${API_URL}/api/actions/recycling-photo`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ imageDataUrl: recyclePreview }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        setRecycleStatus(payload?.error || "Could not verify recycling photo.");
+        return;
+      }
+
+      const xpEarned = Number(payload?.reward?.xpEarned || 0);
+      const wispEarned = Number(payload?.reward?.wispEarned || 0);
+      const itemCount = Number(payload?.recycling?.recyclableItemCount || 0);
+
+      setXp((prev) => Math.min(prev + xpEarned, 50));
+      setWispBalanceDelta((prev) => prev + wispEarned);
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.category === "recycling"
+            ? {
+                ...task,
+                status: "completed" as TaskStatus,
+                subtitle: `Verified recycling: ${itemCount} items`,
+              }
+            : task,
+        ),
+      );
+      setRecycleStatus(`Recycling verified. +${xpEarned} XP and +${wispEarned.toFixed(4)} WISP credited.`);
+      setRecyclePreview(null);
+      setIsRecycleSectionOpen(false);
+    } catch {
+      setRecycleStatus("Could not submit recycling proof right now. Please try again.");
+    } finally {
+      setIsSubmittingRecycle(false);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-900 font-sans p-4 sm:p-8 overflow-y-auto">
       {/* Mobile Device Mockup */}
@@ -733,6 +910,116 @@ export default function HomePage() {
             {screenStatus ? <p className="mt-2 text-[11px] font-semibold text-slate-500">{screenStatus}</p> : null}
           </div>
 
+          <div className="bg-white rounded-2xl p-4 mb-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] border border-slate-100">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div>
+                <h4 className="text-sm font-bold text-[#3b415a]">Plant-Based Meal Photo</h4>
+                <p className="text-[11px] text-slate-500 font-medium">AI verifies plant-based meal and credits reward</p>
+              </div>
+              <button
+                onClick={() => setIsMealSectionOpen((prev) => !prev)}
+                className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md"
+              >
+                {isMealSectionOpen ? "Close" : "Open"}
+              </button>
+            </div>
+
+            {isMealSectionOpen && (
+              <>
+                {mealPreview ? (
+                  <img
+                    src={mealPreview}
+                    alt="Meal photo preview"
+                    className="w-full h-32 object-cover rounded-xl border border-slate-200 mb-3"
+                  />
+                ) : (
+                  <label className="w-full h-24 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-slate-50 transition mb-3">
+                    <Upload className="w-5 h-5 text-slate-500" />
+                    <span className="text-xs font-semibold text-slate-600">Tap to upload meal photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => onMealSelected(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                )}
+
+                <button
+                  onClick={submitMealPhoto}
+                  disabled={isSubmittingMeal}
+                  className="w-full rounded-xl bg-lime-600 text-white py-2.5 text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {isSubmittingMeal ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    "Analyze Meal"
+                  )}
+                </button>
+              </>
+            )}
+
+            {mealStatus ? <p className="mt-2 text-[11px] font-semibold text-slate-500">{mealStatus}</p> : null}
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 mb-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] border border-slate-100">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div>
+                <h4 className="text-sm font-bold text-[#3b415a]">Recycling Photo Proof</h4>
+                <p className="text-[11px] text-slate-500 font-medium">AI verifies recyclables and rewards recycling habit</p>
+              </div>
+              <button
+                onClick={() => setIsRecycleSectionOpen((prev) => !prev)}
+                className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-md"
+              >
+                {isRecycleSectionOpen ? "Close" : "Open"}
+              </button>
+            </div>
+
+            {isRecycleSectionOpen && (
+              <>
+                {recyclePreview ? (
+                  <img
+                    src={recyclePreview}
+                    alt="Recycling photo preview"
+                    className="w-full h-32 object-cover rounded-xl border border-slate-200 mb-3"
+                  />
+                ) : (
+                  <label className="w-full h-24 border-2 border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-slate-50 transition mb-3">
+                    <Upload className="w-5 h-5 text-slate-500" />
+                    <span className="text-xs font-semibold text-slate-600">Tap to upload recycling photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => onRecycleSelected(e.target.files?.[0] || null)}
+                    />
+                  </label>
+                )}
+
+                <button
+                  onClick={submitRecyclingPhoto}
+                  disabled={isSubmittingRecycle}
+                  className="w-full rounded-xl bg-teal-600 text-white py-2.5 text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {isSubmittingRecycle ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    "Analyze Recycling"
+                  )}
+                </button>
+              </>
+            )}
+
+            {recycleStatus ? <p className="mt-2 text-[11px] font-semibold text-slate-500">{recycleStatus}</p> : null}
+          </div>
+
           {/* Task List */}
           <div className="space-y-3">
             {tasks.map((task) => (
@@ -770,7 +1057,7 @@ export default function HomePage() {
                   <div className="bg-[#f0f4f8] text-[#3b415a] text-[10px] font-bold px-2 py-0.5 rounded-full">
                     +{task.xp} XP
                   </div>
-                  {task.status === "actionable" && !["public_transit", "screen_time_reduction"].includes(task.category) && (
+                  {task.status === "actionable" && !["public_transit", "screen_time_reduction", "plant_based_food", "recycling"].includes(task.category) && (
                     <button
                       onClick={() => submitManualAction(task.category)}
                       disabled={verifyingCategory === task.category}

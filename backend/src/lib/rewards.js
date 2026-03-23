@@ -13,6 +13,7 @@ const CATEGORY_MULTIPLIERS = {
   energy_reduction:  1.3,
   screen_time_reduction: 1.15,
   plant_based_food:  1.2,
+  recycling:         1.1,
   thrift_purchase:   1.1,
   carbon_offset:     1.5,
   default:           1.0,

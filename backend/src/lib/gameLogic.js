@@ -25,7 +25,10 @@ const CATEGORY_XP = {
   'public_transit': 50,
   'energy_reduction': 100,
   'screen_time_reduction': 80,
+  'plant_based_food': 70,
   'recycling': 30,
+  'thrift_purchase': 60,
+  'carbon_offset': 120,
   'water_conservation': 40,
   'sustainable_purchase': 60
 };

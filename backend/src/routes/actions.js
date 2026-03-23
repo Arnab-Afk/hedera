@@ -9,6 +9,8 @@ const {
   submitManualAction,
   submitElectricityBillAction,
   submitScreenTimeAction,
+  submitPlantMealAction,
+  submitRecyclingPhotoAction,
   getActions,
   getActionById,
 } = require('../controllers/actionsController');
@@ -85,6 +87,44 @@ router.post(
   ],
   validate,
   submitScreenTimeAction
+);
+
+/**
+ * POST /api/actions/meal-photo
+ * Verify uploaded meal image as plant-based.
+ */
+router.post(
+  '/meal-photo',
+  authenticate,
+  actionsLimiter,
+  [
+    body('imageDataUrl')
+      .isString()
+      .withMessage('imageDataUrl must be a string')
+      .isLength({ min: 100 })
+      .withMessage('imageDataUrl appears too small to be a valid image data URL'),
+  ],
+  validate,
+  submitPlantMealAction
+);
+
+/**
+ * POST /api/actions/recycling-photo
+ * Verify uploaded recycling image proof.
+ */
+router.post(
+  '/recycling-photo',
+  authenticate,
+  actionsLimiter,
+  [
+    body('imageDataUrl')
+      .isString()
+      .withMessage('imageDataUrl must be a string')
+      .isLength({ min: 100 })
+      .withMessage('imageDataUrl appears too small to be a valid image data URL'),
+  ],
+  validate,
+  submitRecyclingPhotoAction
 );
 
 /**
