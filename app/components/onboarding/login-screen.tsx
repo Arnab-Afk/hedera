@@ -9,6 +9,11 @@ interface LoginScreenProps {
   onDone: () => void;
 }
 
+interface WalletPairingData {
+  accountIds: string[];
+  topic: string;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export default function LoginScreen({ onDone }: LoginScreenProps) {
@@ -54,7 +59,7 @@ export default function LoginScreen({ onDone }: LoginScreenProps) {
       }
 
       await connectToWallet.call(hashconnect);
-      hashconnect.pairingEvent.once(async (pairingData) => {
+      hashconnect.pairingEvent.once(async (pairingData: WalletPairingData) => {
         const walletAddress = pairingData.accountIds[0];
         const challengeRes = await fetch(`${API_URL}/api/auth/challenge?walletAddress=${walletAddress}`);
         const { nonce } = await challengeRes.json();
