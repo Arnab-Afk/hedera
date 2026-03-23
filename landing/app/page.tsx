@@ -254,49 +254,45 @@ export default function Home() {
               Three steps, real change
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10 justify-items-center">
               {[
                 {
                   step: '01',
                   title: 'Live Sustainably',
-                  body: 'Take the train, cycle to work, or shop plant-based. Connect Google Maps Timeline or local data sources securely via MCP servers.',
+                  body: 'Take the train, cycle to work, or shop plant-based. Connect Maps Timeline securely.',
                   icon: 'directions_transit',
-                  accent: '#caecbc',
+                  shape: 'rounded-[40%_60%_70%_30%/40%_50%_60%_50%]',
+                  bg: 'bg-surface-container-high',
                 },
                 {
                   step: '02',
                   title: 'AI Verifies, Privately',
-                  body: 'On-device LLM reads your data, confirms the green action, deletes your personal info — leaving only an anonymous proof.',
+                  body: 'On-device LLM reads your data, confirms the green action, then deletes your personal info.',
                   icon: 'psychology',
-                  accent: '#cfe4f0',
+                  shape: 'rounded-[60%_40%_30%_70%/60%_30%_70%_40%]',
+                  bg: 'bg-secondary-container/40',
                 },
                 {
                   step: '03',
                   title: 'Earn & Evolve',
-                  body: "The proof hits Hedera. Your Flora NFT evolves and $WISP tokens land in your wallet — no middleman, no data leak.",
+                  body: 'Your Flora NFT evolves and $WISP tokens land in your wallet — no middleman, no data leak.',
                   icon: 'token',
-                  accent: '#f0e8c8',
+                  shape: 'rounded-[50%_50%_20%_80%/30%_80%_20%_70%]',
+                  bg: 'bg-tertiary-container/30',
                 },
               ].map((step) => (
-                <div
-                  key={step.step}
-                  className="group relative flex flex-col gap-5 p-8 rounded-3xl border border-outline-variant/10 bg-white/60 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-                >
-                  {/* Accent blob in corner */}
+                <div key={step.step} className="flex flex-col items-center gap-5">
+                  {/* Fixed-size blob with overflow-hidden so text never escapes */}
                   <div
-                    className="absolute top-0 right-0 w-28 h-28 rounded-full blur-2xl opacity-60 group-hover:opacity-90 transition-opacity duration-500"
-                    style={{ background: step.accent, transform: 'translate(30%, -30%)' }}
-                  />
-                  <div className="flex items-center justify-between relative z-10">
-                    <span className="font-headline font-black text-5xl text-primary/15">{step.step}</span>
-                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center" style={{ background: step.accent }}>
-                      <span className="material-symbols-outlined text-primary text-xl">{step.icon}</span>
-                    </div>
+                    className={`w-72 h-72 ${step.shape} ${step.bg} overflow-hidden flex flex-col items-center justify-center text-center p-10 gap-3 border border-outline-variant/10 shadow-sm hover:scale-105 transition-transform duration-500`}
+                  >
+                    <span className="font-headline font-black text-5xl text-primary/20 leading-none">{step.step}</span>
+                    <span className="material-symbols-outlined text-primary text-2xl">{step.icon}</span>
+                    <p className="text-on-surface text-sm leading-relaxed font-medium">{step.body}</p>
                   </div>
-                  <div className="relative z-10">
-                    <h3 className="font-headline font-bold uppercase tracking-widest text-sm text-primary mb-3">{step.title}</h3>
-                    <p className="text-on-surface-variant text-sm leading-relaxed">{step.body}</p>
-                  </div>
+                  <span className="font-headline font-bold uppercase tracking-[0.2em] text-primary text-xs">
+                    {step.title}
+                  </span>
                 </div>
               ))}
             </div>
@@ -420,48 +416,52 @@ export default function Home() {
                 Est. 2026
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 justify-items-center">
               {[
                 {
-                  quote: '"Building on Hedera felt like an obvious choice — if we\'re fighting climate change, our infrastructure can\'t add to it."',
+                  quote: '"If we\'re fighting climate change, our infrastructure can\'t add to it."',
                   name: 'Arnab Bhowmik',
                   role: 'Co-founder',
+                  shape: 'rounded-[60%_40%_70%_30%/50%_60%_40%_50%]',
                   bg: 'bg-surface-container-low',
                   offset: '',
                 },
                 {
-                  quote: '"The Flora NFT was my idea and I still get excited watching it evolve. That\'s when you know a feature works."',
+                  quote: '"I still get excited watching the Flora evolve. That\'s when you know a feature works."',
                   name: 'Ishika Bhoyar',
                   role: 'Co-founder',
-                  bg: 'bg-surface-container-low',
+                  shape: 'rounded-[40%_60%_30%_70%/60%_40%_60%_40%]',
+                  bg: 'bg-secondary-container/25',
                   offset: 'lg:mt-12',
                 },
                 {
-                  quote: '"I wanted to prove that privacy and sustainability aren\'t opposites. Wisp is that proof."',
+                  quote: '"Privacy and sustainability aren\'t opposites. Wisp is that proof."',
                   name: 'Saish Korgaonkar',
                   role: 'Co-founder',
-                  bg: 'bg-surface-container-low',
+                  shape: 'rounded-[50%_50%_60%_40%/40%_60%_40%_60%]',
+                  bg: 'bg-tertiary-container/20',
                   offset: '',
                 },
                 {
-                  quote: '"Zero-knowledge proofs sound scary until you realise all they do is let you prove something without oversharing. That\'s just good design."',
+                  quote: '"Proving something without oversharing — that\'s just good design."',
                   name: 'Om Lanke',
                   role: 'Co-founder',
-                  bg: 'bg-surface-container-low',
+                  shape: 'rounded-[30%_70%_50%_50%/60%_30%_70%_40%]',
+                  bg: 'bg-primary-container/30',
                   offset: 'lg:mt-12',
                 },
               ].map((t) => (
-                <div
-                  key={t.name}
-                  className={`p-10 rounded-xl ${t.bg} border border-outline-variant/10 flex flex-col justify-between min-h-80 ${t.offset} hover:shadow-lg transition-all duration-300`}
-                >
-                  <p className="text-lg italic text-on-surface leading-relaxed">{t.quote}</p>
-                  <div>
-                    <div className="h-px bg-outline-variant/20 w-12 mb-4" />
-                    <h4 className="font-headline font-bold uppercase tracking-widest text-sm text-on-surface">
-                      {t.name}
-                    </h4>
-                    <p className="text-xs text-outline uppercase tracking-widest">{t.role}</p>
+                <div key={t.name} className={`flex flex-col items-center gap-4 ${t.offset}`}>
+                  {/* Blob quote card */}
+                  <div
+                    className={`w-64 h-64 ${t.shape} ${t.bg} overflow-hidden flex items-center justify-center text-center p-10 border border-outline-variant/10 shadow-sm hover:scale-105 transition-transform duration-500`}
+                  >
+                    <p className="text-base italic text-on-surface leading-relaxed">{t.quote}</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="h-px w-8 bg-outline-variant/30 mx-auto mb-2" />
+                    <h4 className="font-headline font-bold uppercase tracking-widest text-xs text-on-surface">{t.name}</h4>
+                    <p className="text-[10px] uppercase tracking-widest text-outline mt-0.5">{t.role}</p>
                   </div>
                 </div>
               ))}
