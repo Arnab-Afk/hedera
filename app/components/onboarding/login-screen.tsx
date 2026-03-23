@@ -9,6 +9,8 @@ interface LoginScreenProps {
   onDone: () => void;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 export default function LoginScreen({ onDone }: LoginScreenProps) {
   const [loading, setLoading] = useState<"google" | "wallet" | null>(null);
   const { login } = useAuth();
@@ -16,12 +18,7 @@ export default function LoginScreen({ onDone }: LoginScreenProps) {
   const handleGoogleLogin = async () => {
     setLoading("google");
     try {
-      // In a real implementation, you would use Web3Auth SDK here
-      // const web3authProvider = await web3auth.connect();
-      // const user = await web3auth.getUserInfo();
-      
-      // Mocking the social login call to our backend
-      const response = await fetch("http://localhost:3001/api/auth/social-login", {
+      const response = await fetch(`${API_URL}/api/auth/social-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -47,16 +44,13 @@ export default function LoginScreen({ onDone }: LoginScreenProps) {
   const handleWalletLogin = async () => {
     setLoading("wallet");
     try {
-      // 1. Get Challenge
-      const walletAddress = "0.0.existing_user_address"; // Would come from HashPack/Blade
-      const challengeRes = await fetch(`http://localhost:3001/api/auth/challenge?walletAddress=${walletAddress}`);
+      const walletAddress = "0.0.existing_user_address";
+      const challengeRes = await fetch(`${API_URL}/api/auth/challenge?walletAddress=${walletAddress}`);
       const { nonce } = await challengeRes.json();
 
-      // 2. Sign with Wallet (Mocked)
       const signature = "mock_signature_from_wallet";
 
-      // 3. Login
-      const loginRes = await fetch("http://localhost:3001/api/auth/login", {
+      const loginRes = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ walletAddress, signature }),

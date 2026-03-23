@@ -9,6 +9,8 @@ interface Props {
   onDone: () => void;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 export default function NameYourSpirit({ value, onChange, onDone }: Props) {
   const [shake, setShake] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -23,7 +25,7 @@ export default function NameYourSpirit({ value, onChange, onDone }: Props) {
 
     setIsSaving(true);
     try {
-      const response = await fetch("http://localhost:3001/api/game/spirit/rename", {
+      const response = await fetch(`${API_URL}/api/game/spirit/rename`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

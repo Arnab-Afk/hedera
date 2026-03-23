@@ -39,6 +39,8 @@ interface Quest {
   claimed: boolean;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 export default function HomePage() {
   const { token, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<GameProfile | null>(null);
@@ -54,10 +56,10 @@ export default function HomePage() {
   const fetchData = async () => {
     try {
       const [profileRes, questsRes] = await Promise.all([
-        fetch("http://localhost:3001/api/game/profile", {
+        fetch(`${API_URL}/api/game/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        fetch("http://localhost:3001/api/quests", {
+        fetch(`${API_URL}/api/quests`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
@@ -76,7 +78,7 @@ export default function HomePage() {
 
   const handleClaimQuest = async (questId: string) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/quests/${questId}/claim`, {
+      const response = await fetch(`${API_URL}/api/quests/${questId}/claim`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
