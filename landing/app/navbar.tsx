@@ -55,17 +55,20 @@ export default function Navbar() {
         }}
       >
         {/* Logo */}
-        <span
+        <a
+          href="/"
+          onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="font-headline font-bold text-green-800 uppercase"
           style={{
             fontSize:      scrolled ? '0.85rem' : '1.1rem',
             letterSpacing: '0.18em',
             transition:    'font-size 0.5s cubic-bezier(0.4,0,0.2,1)',
             flexShrink:    0,
+            textDecoration:'none',
           }}
         >
           WISP
-        </span>
+        </a>
 
         {/* Nav links — always in markup, clip via max-width */}
         <div
@@ -95,7 +98,8 @@ export default function Navbar() {
         </div>
 
         {/* CTA */}
-        <button
+          <a
+          href="/app"
           className="bg-primary text-on-primary font-lexend uppercase font-bold tracking-widest hover:bg-primary-dim active:scale-95 transition-colors duration-200"
           style={{
             fontSize:    '0.7rem',
@@ -106,7 +110,7 @@ export default function Navbar() {
           }}
         >
           Launch App
-        </button>
+        </a>
       </nav>
     </div>
   );
