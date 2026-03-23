@@ -1,5 +1,7 @@
 "use client";
-import { Home, ClipboardList, Leaf, ShoppingBag, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/context/auth-context";
+import { Home, ClipboardList, Leaf, ShoppingBag, User, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
@@ -10,7 +12,94 @@ const navItems = [
   { icon: User, label: "Profile", href: "/home" },
 ];
 
+interface GameProfile {
+  level: number;
+  experience: number;
+  energy: number;
+  gold: string;
+  spirit_name: string;
+  xp_to_next_level: number;
+  streak: {
+    current_streak: number;
+    longest_streak: number;
+    total_actions: number;
+  };
+}
+
+interface Quest {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  requirement_count: number;
+  current_count: number;
+  xp_reward: number;
+  wisp_reward: string;
+  completed: boolean;
+  claimed: boolean;
+}
+
 export default function HomePage() {
+  const { token, isAuthenticated } = useAuth();
+  const [profile, setProfile] = useState<GameProfile | null>(null);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated]);
+
+  const fetchData = async () => {
+    try {
+      const [profileRes, questsRes] = await Promise.all([
+        fetch("http://localhost:3001/api/game/profile", {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        fetch("http://localhost:3001/api/quests", {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+
+      const profileData = await profileRes.json();
+      const questsData = await questsRes.json();
+
+      setProfile(profileData);
+      setQuests(questsData.quests);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClaimQuest = async (questId: string) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/quests/${questId}/claim`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        fetchData(); // Refresh data
+      }
+    } catch (error) {
+      console.error("Error claiming quest:", error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="home-root items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-white" />
+      </div>
+    );
+  }
+
+  const xpProgress = profile 
+    ? (profile.experience / (profile.experience + profile.xp_to_next_level)) * 100 
+    : 0;
+
   return (
     <div className="home-root">
       <div className="home-bg" />
@@ -20,14 +109,14 @@ export default function HomePage() {
         <div className="home-header-left">
           <span className="home-logo">🌿</span>
           <div>
-            <p className="home-welcome">Welcome back</p>
-            <h1 className="home-name">Sprout</h1>
+            <p className="home-welcome">Level {profile?.level || 1}</p>
+            <h1 className="home-name">{profile?.spirit_name || "Sprout"}</h1>
           </div>
         </div>
         <div className="home-header-right">
           <div className="wisp-balance">
             <span className="wisp-coin">💰</span>
-            <span className="wisp-amount">0 $WISP</span>
+            <span className="wisp-amount">{parseFloat(profile?.gold || "0").toFixed(0)} $WISP</span>
           </div>
         </div>
       </header>
@@ -36,17 +125,17 @@ export default function HomePage() {
       <div className="spirit-card">
         <div className="spirit-glow" />
         <div className="spirit-top">
-          <span className="spirit-tag">⚡ Day 1 — Seedling</span>
+          <span className="spirit-tag">⚡ Day {profile?.streak.current_streak || 1} — {profile?.level && profile.level > 5 ? "Grown" : "Seedling"}</span>
         </div>
         <div className="spirit-plant-wrap">
-          <span className="spirit-plant">🌱</span>
+          <span className="spirit-plant">{profile?.level && profile.level > 5 ? "🌳" : "🌱"}</span>
         </div>
         <div className="spirit-bar-wrap">
           <div className="spirit-bar-label">
-            <span>0 / 20 XP</span>
+            <span>{profile?.experience} / {profile ? profile.experience + profile.xp_to_next_level : 100} XP</span>
           </div>
           <div className="spirit-bar-track">
-            <div className="spirit-bar-fill" style={{ width: "0%" }} />
+            <div className="spirit-bar-fill" style={{ width: `${xpProgress}%` }} />
           </div>
         </div>
       </div>
@@ -55,27 +144,26 @@ export default function HomePage() {
       <div className="tasks-section">
         <div className="tasks-header">
           <span className="tasks-icon">📋</span>
-          <span className="tasks-title">8 goals left for today!</span>
-          <span className="tasks-flag">🏳️</span>
+          <span className="tasks-title">{quests.filter(q => !q.completed).length} goals left for today!</span>
         </div>
 
-        {[
-          { icon: "🌬️", label: "Take 3 deep breaths", done: true },
-          { icon: "🌿", label: "Choose a plant-based meal", done: true },
-          { icon: "🚌", label: "Use public transport", done: false },
-        ].map((t, i) => (
-          <div key={i} className={`task-card ${t.done ? "done" : ""}`}>
-            <span className="task-icon">{t.icon}</span>
+        {quests.map((quest) => (
+          <div 
+            key={quest.id} 
+            className={`task-card ${quest.completed ? "done" : ""}`}
+            onClick={() => quest.completed && !quest.claimed && handleClaimQuest(quest.id)}
+          >
+            <span className="task-icon">{quest.category === 'public_transit' ? '🚌' : '🌿'}</span>
             <div className="task-body">
-              <p className="task-name">{t.label}</p>
+              <p className="task-name">{quest.title}</p>
               <div className="task-meta">
-                <span className="task-tag">daily</span>
-                <span className="task-xp">+5 XP</span>
-                <span className="task-token">+1 $WISP</span>
+                <span className="task-tag">{quest.current_count}/{quest.requirement_count}</span>
+                <span className="task-xp">+{quest.xp_reward} XP</span>
+                <span className="task-token">+{parseFloat(quest.wisp_reward).toFixed(0)} $WISP</span>
               </div>
             </div>
-            <div className={`task-check ${t.done ? "checked" : ""}`}>
-              {t.done ? "✓" : <span className="task-plus">+</span>}
+            <div className={`task-check ${quest.completed ? "checked" : ""}`}>
+              {quest.claimed ? "✓" : (quest.completed ? "🎁" : <span className="task-plus">+</span>)}
             </div>
           </div>
         ))}
@@ -98,17 +186,18 @@ export default function HomePage() {
         * { box-sizing: border-box; }
         .home-root {
           min-height: 100dvh;
-          background: linear-gradient(170deg, #f5a623 0%, #f0b429 60%, #e89d1b 100%);
+          background: linear-gradient(170deg, #10b981 0%, #059669 60%, #064e3b 100%);
           display: flex;
           flex-direction: column;
           padding-bottom: 80px;
           font-family: inherit;
+          color: white;
         }
         .home-bg {
           position: fixed;
           inset: 0;
           background:
-            radial-gradient(ellipse 70% 40% at 20% 15%, rgba(255,255,255,.18) 0%, transparent 60%);
+            radial-gradient(ellipse 70% 40% at 20% 15%, rgba(255,255,255,.12) 0%, transparent 60%);
           pointer-events: none;
           z-index: 0;
         }
@@ -122,10 +211,10 @@ export default function HomePage() {
         }
         .home-header-left { display: flex; align-items: center; gap: .75rem; }
         .home-logo { font-size: 2rem; }
-        .home-welcome { margin: 0; font-size: .8rem; color: rgba(92,46,0,.7); }
-        .home-name { margin: 0; font-size: 1.25rem; font-weight: 800; color: #3b1e00; }
+        .home-welcome { margin: 0; font-size: .8rem; color: rgba(255,255,255,.7); }
+        .home-name { margin: 0; font-size: 1.25rem; font-weight: 800; color: #ffffff; }
         .wisp-balance {
-          background: rgba(255,255,255,.25);
+          background: rgba(255,255,255,.15);
           padding: .45rem .9rem;
           border-radius: 999px;
           display: flex;
@@ -133,20 +222,19 @@ export default function HomePage() {
           gap: .4rem;
           font-size: .85rem;
           font-weight: 700;
-          color: #3b1e00;
+          color: #ffffff;
           backdrop-filter: blur(8px);
-          border: 1px solid rgba(255,255,255,.4);
+          border: 1px solid rgba(255,255,255,.2);
         }
-        /* Spirit card */
         .spirit-card {
           position: relative;
           z-index: 1;
           margin: 0 1.25rem;
-          background: rgba(255,255,255,.18);
+          background: rgba(255,255,255,.12);
           border-radius: 28px;
           padding: 1.25rem;
           backdrop-filter: blur(12px);
-          border: 1px solid rgba(255,255,255,.35);
+          border: 1px solid rgba(255,255,255,.25);
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -156,25 +244,16 @@ export default function HomePage() {
         .spirit-glow {
           position: absolute;
           inset: 0;
-          background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(255,255,255,.25) 0%, transparent 70%);
+          background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(255,255,255,.2) 0%, transparent 70%);
           pointer-events: none;
         }
-        .spirit-top {
-          align-self: flex-start;
-          position: relative;
-          z-index: 1;
-        }
         .spirit-tag {
-          background: linear-gradient(90deg, #f97316, #fb923c);
+          background: linear-gradient(90deg, #10b981, #34d399);
           color: #fff;
           font-size: .8rem;
           font-weight: 700;
           padding: .3rem .75rem;
           border-radius: 999px;
-        }
-        .spirit-plant-wrap {
-          position: relative;
-          z-index: 1;
         }
         .spirit-plant {
           font-size: 7rem;
@@ -187,33 +266,19 @@ export default function HomePage() {
           0%, 100% { transform: translateY(0) scale(1); }
           50%       { transform: translateY(-10px) scale(1.04); }
         }
-        .spirit-bar-wrap {
-          width: 100%;
-          position: relative;
-          z-index: 1;
-        }
-        .spirit-bar-label {
-          display: flex;
-          justify-content: center;
-          font-size: .8rem;
-          color: #3b1e00;
-          margin-bottom: .4rem;
-          font-weight: 600;
-        }
         .spirit-bar-track {
           width: 100%;
           height: 12px;
-          background: rgba(255,255,255,.45);
+          background: rgba(255,255,255,.2);
           border-radius: 999px;
           overflow: hidden;
         }
         .spirit-bar-fill {
           height: 100%;
-          background: linear-gradient(90deg, #f97316, #fbbf24);
+          background: linear-gradient(90deg, #34d399, #6ee7b7);
           border-radius: 999px;
           transition: width 1s ease;
         }
-        /* Tasks */
         .tasks-section {
           position: relative;
           z-index: 1;
@@ -222,32 +287,21 @@ export default function HomePage() {
           flex-direction: column;
           gap: .75rem;
         }
-        .tasks-header {
-          display: flex;
-          align-items: center;
-          gap: .5rem;
-          font-size: 1rem;
-          font-weight: 700;
-          color: #3b1e00;
-        }
-        .tasks-title { flex: 1; }
         .task-card {
-          background: #2c2c3e;
+          background: rgba(0,0,0,.2);
           border-radius: 18px;
           padding: 1rem 1.1rem;
           display: flex;
           align-items: center;
           gap: 1rem;
           transition: transform .15s;
+          cursor: pointer;
         }
         .task-card:active { transform: scale(.98); }
-        .task-icon { font-size: 1.6rem; }
-        .task-body { flex: 1; }
-        .task-name { margin: 0; font-size: .95rem; font-weight: 600; color: #f1f5f9; }
-        .task-meta { display: flex; gap: .4rem; margin-top: .3rem; }
+        .task-name { margin: 0; font-size: .95rem; font-weight: 600; color: #ffffff; }
         .task-tag {
-          background: rgba(255,255,255,.08);
-          color: rgba(255,255,255,.55);
+          background: rgba(255,255,255,.1);
+          color: rgba(255,255,255,.6);
           font-size: .7rem;
           padding: .15rem .5rem;
           border-radius: 999px;
@@ -272,8 +326,8 @@ export default function HomePage() {
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          background: #22c55e;
-          display: none;
+          background: rgba(255,255,255,.1);
+          display: flex;
           align-items: center;
           justify-content: center;
           color: #fff;
@@ -281,32 +335,14 @@ export default function HomePage() {
           font-weight: 700;
           flex-shrink: 0;
         }
-        .task-card.done .task-check { display: flex; }
-        .task-plus {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          background: #22c55e;
-          color: #fff;
-          font-size: 1.4rem;
-          font-weight: 300;
-          flex-shrink: 0;
-        }
-        .task-card:not(.done) .task-check {
-          display: flex;
-          background: #22c55e;
-        }
-        /* Bottom Nav */
+        .task-card.done .task-check { background: #10b981; }
         .app-nav {
           position: fixed;
           bottom: 0;
           left: 0;
           right: 0;
           z-index: 50;
-          background: rgba(20,20,30,.95);
+          background: rgba(0,0,0,.8);
           backdrop-filter: blur(16px);
           border-top: 1px solid rgba(255,255,255,.08);
           display: flex;
@@ -320,17 +356,13 @@ export default function HomePage() {
           flex-direction: column;
           align-items: center;
           gap: 2px;
-          color: rgba(255,255,255,.45);
+          color: rgba(255,255,255,.4);
           text-decoration: none;
           font-size: .65rem;
           font-weight: 600;
-          padding: .4rem .5rem;
-          border-radius: 12px;
           transition: color .2s;
-          min-width: 48px;
         }
-        .nav-item.active { color: #f5a623; }
-        .nav-item:hover { color: rgba(255,255,255,.8); }
+        .nav-item.active { color: #34d399; }
       `}</style>
     </div>
   );
