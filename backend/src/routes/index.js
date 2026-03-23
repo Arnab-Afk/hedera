@@ -4,6 +4,8 @@ const usersRoutes     = require('./users');
 const actionsRoutes   = require('./actions');
 const streaksRoutes   = require('./streaks');
 const merchantsRoutes = require('./merchants');
+const gameRoutes      = require('./game');
+const questsRoutes    = require('./quests');
 
 const router = Router();
 
@@ -12,5 +14,7 @@ router.use('/users',     usersRoutes);
 router.use('/actions',   actionsRoutes);
 router.use('/streaks',   streaksRoutes);
 router.use('/merchants', merchantsRoutes);
+router.use('/game',      gameRoutes);
+router.use('/quests',    questsRoutes);
 
 module.exports = router;

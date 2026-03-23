@@ -1,5 +1,5 @@
 /**
- * Seed script — populates merchants table.
+ * Seed script — populates merchants and quest_definitions tables.
  * Run: npm run db:seed
  */
 require('dotenv').config();
@@ -33,27 +33,46 @@ const MERCHANTS = [
   { name: 'Pike Eco Provisions',   category: 'grocery',      description: 'Certified plastic-free grocery',          city: 'Seattle',       discount_pct: 10, wallet_address: '0.0.100020' },
 ];
 
+const QUESTS = [
+  { title: 'Commuter Hero', description: 'Take public transit 3 times today.', category: 'public_transit', requirement_count: 3, xp_reward: 150, wisp_reward: 5, type: 'daily' },
+  { title: 'Energy Saver', description: 'Reduce your energy consumption today.', category: 'energy_reduction', requirement_count: 1, xp_reward: 100, wisp_reward: 3, type: 'daily' },
+  { title: 'Recycling Pro', description: 'Recycle 5 items.', category: 'recycling', requirement_count: 5, xp_reward: 50, wisp_reward: 1, type: 'daily' },
+  { title: 'Water Guardian', description: 'Save 10 gallons of water.', category: 'water_conservation', requirement_count: 1, xp_reward: 80, wisp_reward: 2, type: 'daily' },
+  { title: 'Sustainable Shopper', description: 'Make a purchase at a certified merchant.', category: 'sustainable_purchase', requirement_count: 1, xp_reward: 120, wisp_reward: 10, type: 'daily' },
+  { title: 'Eco Warrior', description: 'Complete 10 green actions.', category: 'any', requirement_count: 10, xp_reward: 500, wisp_reward: 50, type: 'weekly' },
+];
+
 async function seed() {
   await testConnection();
   try {
     console.log('🌱 Seeding merchants...');
-    let inserted = 0, skipped = 0;
-
+    let mInserted = 0, mSkipped = 0;
     for (const m of MERCHANTS) {
-      const existing = await pool.query(
-        'SELECT id FROM merchants WHERE name = $1 AND city = $2', [m.name, m.city]
-      );
-      if (existing.rows.length) { skipped++; continue; }
-
+      const existing = await pool.query('SELECT id FROM merchants WHERE name = $1 AND city = $2', [m.name, m.city]);
+      if (existing.rows.length) { mSkipped++; continue; }
       await pool.query(
         `INSERT INTO merchants (name, category, description, city, discount_pct, wallet_address, wisp_accepted)
          VALUES ($1,$2,$3,$4,$5,$6,TRUE)`,
         [m.name, m.category, m.description, m.city, m.discount_pct, m.wallet_address]
       );
-      inserted++;
+      mInserted++;
     }
+    console.log(`✅ Merchants - Inserted: ${mInserted} | Skipped: ${mSkipped}`);
 
-    console.log(`✅ Inserted: ${inserted} | Skipped: ${skipped}`);
+    console.log('🌱 Seeding quest definitions...');
+    let qInserted = 0, qSkipped = 0;
+    for (const q of QUESTS) {
+      const existing = await pool.query('SELECT id FROM quest_definitions WHERE title = $1', [q.title]);
+      if (existing.rows.length) { qSkipped++; continue; }
+      await pool.query(
+        `INSERT INTO quest_definitions (title, description, category, requirement_count, xp_reward, wisp_reward, type)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [q.title, q.description, q.category, q.requirement_count, q.xp_reward, q.wisp_reward, q.type]
+      );
+      qInserted++;
+    }
+    console.log(`✅ Quests - Inserted: ${qInserted} | Skipped: ${qSkipped}`);
+
   } finally {
     await pool.end();
   }
