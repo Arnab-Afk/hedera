@@ -5,11 +5,31 @@ const { authenticate }   = require('../middleware/auth');
 const { actionsLimiter } = require('../middleware/rateLimiter');
 const {
   submitAction,
+  submitTicketPhotoAction,
   getActions,
   getActionById,
 } = require('../controllers/actionsController');
 
 const router = Router();
+
+/**
+ * POST /api/actions
+ * Submit an anonymized proof from the local agent (rate-limited: 20/hr).
+ */
+router.post(
+  '/ticket-photo',
+  authenticate,
+  actionsLimiter,
+  [
+    body('imageDataUrl')
+      .isString()
+      .withMessage('imageDataUrl must be a string')
+      .isLength({ min: 100 })
+      .withMessage('imageDataUrl appears too small to be a valid image data URL'),
+  ],
+  validate,
+  submitTicketPhotoAction
+);
 
 /**
  * POST /api/actions

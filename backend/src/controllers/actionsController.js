@@ -1,6 +1,7 @@
 const { query } = require('../db/pool');
 const { calculateWispReward } = require('../lib/rewards');
 const { getActionXp, calculateLevel, updateQuestProgress } = require('../lib/gameLogic');
+const { verifyTicketWithOpenRouter } = require('../lib/ticketPhotoVerifier');
 
 /**
  * POST /api/actions
@@ -9,8 +10,28 @@ const { getActionXp, calculateLevel, updateQuestProgress } = require('../lib/gam
  */
 async function submitAction(req, res, next) {
   try {
-    const { category, proofHash, daySequence, hcsTopicId, hcsSequenceNumber } = req.body;
-    const userId = req.user.id;
+    const { 
+      category, 
+      proofHash, 
+      daySequence, 
+      hcsTopicId, 
+      hcsSequenceNumber,
+      walletAddress // Optional, provided by agent for bypass auth
+    } = req.body;
+
+    let userId;
+    if (req.isAgent) {
+      if (!walletAddress) {
+        return res.status(400).json({ error: 'walletAddress is required for agent-bypass submission' });
+      }
+      const userRes = await query('SELECT id FROM users WHERE wallet_address = $1', [walletAddress]);
+      if (!userRes.rows.length) {
+        return res.status(404).json({ error: 'User with provided walletAddress not found' });
+      }
+      userId = userRes.rows[0].id;
+    } else {
+      userId = req.user.id;
+    }
 
     // Reject duplicate proofs
     const dup = await query('SELECT id FROM actions WHERE proof_hash = $1', [proofHash]);
@@ -58,6 +79,106 @@ async function submitAction(req, res, next) {
       wispEarned, 
       xpEarned,
       newLevel: newLevel > oldLevel ? newLevel : null
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/actions/ticket-photo
+ * Accepts a ticket image data URL, verifies via OpenRouter vision,
+ * and credits rewards when a valid public-transit action is detected.
+ */
+async function submitTicketPhotoAction(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { imageDataUrl } = req.body;
+
+    const verification = await verifyTicketWithOpenRouter({ imageDataUrl });
+
+    if (!verification.isValidTransitTicket || verification.confidence < 0.45) {
+      return res.status(422).json({
+        error: 'Ticket could not be verified as valid public transit proof',
+        verification: {
+          confidence: verification.confidence,
+          reasoning: verification.reasoning,
+        },
+      });
+    }
+
+    const duplicate = await query(
+      'SELECT id FROM actions WHERE proof_hash = $1 OR proof_hash = $2 LIMIT 1',
+      [verification.imageHash, verification.ticketFingerprint]
+    );
+    if (duplicate.rows.length) {
+      return res.status(409).json({
+        error: 'Duplicate ticket submission detected',
+      });
+    }
+
+    const daySequence = await getDaySequenceForUser(userId);
+    const category = 'public_transit';
+    const proofHash = verification.ticketFingerprint;
+
+    const baseWisp = calculateWispReward(category, daySequence);
+    const impactBonus = 1 + Math.min(1, verification.estimatedCo2SavedKg / 2);
+    const wispEarned = round8(baseWisp * impactBonus);
+
+    const baseXp = getActionXp(category);
+    const impactXpBonus = Math.min(20, Math.round(verification.estimatedCo2SavedKg * 10));
+    const xpEarned = baseXp + impactXpBonus;
+
+    const actionInsert = await query(
+      `INSERT INTO actions
+         (user_id, category, proof_hash, hcs_topic_id, hcs_sequence_number, day_sequence, wisp_earned, xp_earned)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        userId,
+        category,
+        proofHash,
+        null,
+        null,
+        daySequence,
+        wispEarned,
+        xpEarned,
+      ]
+    );
+
+    const userUpdate = await query(
+      `UPDATE users
+       SET experience = experience + $1,
+           gold = gold + $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING experience, level`,
+      [xpEarned, wispEarned, userId]
+    );
+
+    const { experience, level: oldLevel } = userUpdate.rows[0];
+    const newLevel = calculateLevel(experience);
+    if (newLevel > oldLevel) {
+      await query('UPDATE users SET level = $1 WHERE id = $2', [newLevel, userId]);
+    }
+
+    await updateStreak(userId, daySequence, xpEarned);
+    await updateQuestProgress(query, userId, category);
+
+    return res.status(201).json({
+      action: actionInsert.rows[0],
+      reward: {
+        wispEarned,
+        xpEarned,
+      },
+      verification: {
+        confidence: verification.confidence,
+        transportType: verification.transportType,
+        oneWayDistanceKm: verification.oneWayDistanceKm,
+        estimatedCo2SavedKg: verification.estimatedCo2SavedKg,
+        reasoning: verification.reasoning,
+      },
+      levelUp: newLevel > oldLevel ? newLevel : null,
     });
   } catch (err) {
     next(err);
@@ -126,4 +247,27 @@ async function updateStreak(userId, daySequence, xpEarned) {
   );
 }
 
-module.exports = { submitAction, getActions, getActionById };
+async function getDaySequenceForUser(userId) {
+  const streak = await query(
+    'SELECT current_streak, last_action_date FROM streaks WHERE user_id = $1 LIMIT 1',
+    [userId]
+  );
+
+  if (!streak.rows.length) {
+    return 1;
+  }
+
+  const { current_streak, last_action_date } = streak.rows[0];
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (last_action_date && String(last_action_date).slice(0, 10) === today) {
+    return Math.max(1, current_streak || 1);
+  }
+  return (current_streak || 0) + 1;
+}
+
+function round8(value) {
+  return Math.round(value * 1e8) / 1e8;
+}
+
+module.exports = { submitAction, submitTicketPhotoAction, getActions, getActionById };

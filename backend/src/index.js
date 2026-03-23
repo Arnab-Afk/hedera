@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3001;
 // ── Middleware ───────────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 app.use(globalLimiter);   // 100 req / 15 min per IP globally
 
