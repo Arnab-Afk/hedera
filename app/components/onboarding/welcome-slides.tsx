@@ -33,7 +33,7 @@ const slides = [
     iconColor: "#d97706",
     accent: "#d97706",
     title: "Earn Real $WISP Tokens",
-    body: "Every verified eco-action earns you $WISP — Hedera tokens redeemable at partner businesses. Real rewards for real habits.",
+    body: "Every verified eco-action earns you $WISP — Hedera tokens redeemable at partner businesses.",
   },
 ];
 
@@ -44,53 +44,45 @@ export default function WelcomeSlides({ onDone }: WelcomeSlidesProps) {
   const isLast = index === slides.length - 1;
 
   const next = () => {
-    if (isLast) {
-      onDone();
-    } else {
-      setIndex((i) => i + 1);
-    }
+    if (isLast) onDone();
+    else setIndex((i) => i + 1);
   };
 
   return (
     <div className="flex-1 flex flex-col bg-[#f4f7fa] overflow-hidden relative">
       {/* Sky gradient */}
       <div
-        className="absolute top-0 left-0 w-full h-[35%] z-0"
+        className="absolute top-0 left-0 w-full h-[40%] z-0"
         style={{ background: "linear-gradient(to bottom, #e0e8f5, #f4f7fa)" }}
       >
         <div className="absolute top-8 left-6 w-14 h-5 bg-white rounded-full opacity-60 blur-[1px]" />
         <div className="absolute top-14 right-8 w-20 h-6 bg-white rounded-full opacity-50 blur-[1px]" />
       </div>
 
-      {/* Slide number */}
+      {/* Slide counter */}
       <div className="relative z-10 px-6 pt-10 flex justify-end">
-        <span className="text-[11px] font-bold text-slate-400">
+        <span className="text-[11px] font-bold text-slate-400 bg-white/70 px-2.5 py-1 rounded-full">
           {index + 1} / {slides.length}
         </span>
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pb-4 gap-6">
-        {/* Icon illustration */}
+      {/* Icon + text — centered in flex-1 */}
+      <div className="flex-1 relative z-10 flex flex-col items-center justify-center px-6 gap-6">
         <div
-          key={index}
-          className="w-28 h-28 rounded-3xl flex items-center justify-center shadow-[0_8px_30px_rgba(0,0,0,0.08)] border-2"
+          key={`icon-${index}`}
+          className="w-28 h-28 rounded-3xl flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.08)] border-2"
           style={{
             background: slide.iconBg,
             borderColor: slide.iconBorder,
             animation: "pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
           }}
         >
-          <Icon style={{ width: 48, height: 48, color: slide.iconColor, strokeWidth: 1.5 }} />
+          <Icon style={{ width: 52, height: 52, color: slide.iconColor, strokeWidth: 1.5 }} />
         </div>
 
-        <div key={`text-${index}`} style={{ animation: "fade-up 0.4s ease 0.1s both" }}>
-          <h2 className="text-2xl font-black text-[#3b415a] text-center mb-2 leading-snug">
-            {slide.title}
-          </h2>
-          <p className="text-sm text-slate-400 font-medium text-center leading-relaxed max-w-xs mx-auto">
-            {slide.body}
-          </p>
+        <div key={`text-${index}`} className="text-center" style={{ animation: "fade-up 0.4s ease 0.1s both" }}>
+          <h2 className="text-2xl font-black text-[#3b415a] leading-snug mb-2">{slide.title}</h2>
+          <p className="text-sm text-slate-400 font-medium leading-relaxed max-w-xs mx-auto">{slide.body}</p>
         </div>
       </div>
 
@@ -109,7 +101,6 @@ export default function WelcomeSlides({ onDone }: WelcomeSlidesProps) {
             />
           ))}
         </div>
-
         <button
           onClick={next}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-bold text-sm shadow-lg transition-all hover:opacity-90 active:scale-[0.97]"
@@ -118,12 +109,8 @@ export default function WelcomeSlides({ onDone }: WelcomeSlidesProps) {
           {isLast ? "Get Started" : "Next"}
           <ChevronRight className="w-4 h-4" />
         </button>
-
         {!isLast && (
-          <button
-            onClick={onDone}
-            className="text-xs text-slate-400 font-semibold hover:text-[#3b415a] transition-colors"
-          >
+          <button onClick={onDone} className="text-xs text-slate-400 font-semibold hover:text-[#3b415a] transition-colors">
             Skip intro
           </button>
         )}
@@ -135,7 +122,7 @@ export default function WelcomeSlides({ onDone }: WelcomeSlidesProps) {
           to   { opacity: 1; transform: scale(1); }
         }
         @keyframes fade-up {
-          from { opacity: 0; transform: translateY(14px); }
+          from { opacity: 0; transform: translateY(12px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
