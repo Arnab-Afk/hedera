@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 function extractBase64Payload(dataUrl) {
   if (typeof dataUrl !== 'string') {
@@ -20,16 +20,6 @@ function extractBase64Payload(dataUrl) {
   }
 
   return { mimeType, payload };
-}
-
-function safeJsonParse(raw) {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    if (!fenced) throw new Error('Model did not return valid JSON');
-    return JSON.parse(fenced[1]);
-  }
 }
 
 function normalizeModelOutput(parsed) {
@@ -52,13 +42,24 @@ function normalizeModelOutput(parsed) {
   };
 }
 
-function buildTicketFingerprint(fields) {
+function safeJsonParse(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (!fenced) throw new Error('Model did not return valid JSON');
+    return JSON.parse(fenced[1]);
+  }
+}
+
+function buildTicketFingerprint(fields, imageHash) {
   const raw = [
     fields.ticketId || 'none',
     fields.issueDate || 'none',
     fields.operator || 'none',
     fields.transportType || 'unknown',
     String(fields.oneWayDistanceKm || 0),
+    imageHash,
   ].join('|');
 
   return crypto.createHash('sha256').update(raw).digest('hex');
@@ -84,18 +85,20 @@ function estimateCo2SavedKg(transportType, oneWayDistanceKm) {
 
 async function verifyTicketWithOpenRouter({ imageDataUrl }) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-super-120b-a12b:free';
+  // Multimodal chat model for image + text understanding.
+  const model = process.env.OPENROUTER_MODEL || 'google/gemma-3-4b-it:free';
 
   if (!apiKey) {
     throw new Error('OPENROUTER_API_KEY is not configured on backend');
   }
 
   const { payload, mimeType } = extractBase64Payload(imageDataUrl);
+  const imageHash = crypto.createHash('sha256').update(payload).digest('hex');
 
   const prompt = [
     'You are a strict transit ticket verifier.',
-    'Analyze the provided image and decide if it is a genuine public transit ticket/passes/boarding proof.',
-    'Return only JSON with this exact shape:',
+    'Analyze the image and decide whether it is a genuine public transit ticket/pass/boarding proof.',
+    'Return only JSON in this exact shape:',
     '{',
     '  "isValidTransitTicket": boolean,',
     '  "confidence": number,',
@@ -108,18 +111,18 @@ async function verifyTicketWithOpenRouter({ imageDataUrl }) {
     '}',
     'Rules:',
     '- If uncertain, set isValidTransitTicket=false.',
-    '- Keep confidence in range [0,1].',
-    '- Estimate oneWayDistanceKm conservatively; use 0 if unknown.',
-    '- Do not include markdown or prose outside JSON.',
+    '- Keep confidence in [0,1].',
+    '- Use conservative distance estimate and 0 if unknown.',
+    '- No extra text outside JSON.',
   ].join('\n');
 
-  const response = await fetch(OPENROUTER_URL, {
+  const response = await fetch(OPENROUTER_CHAT_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': process.env.SITE_URL || 'http://localhost:3001',
-      'X-Title': process.env.SITE_NAME || 'Wisp Backend',
+      'X-OpenRouter-Title': process.env.SITE_NAME || 'Wisp Backend',
     },
     body: JSON.stringify({
       model,
@@ -145,13 +148,13 @@ async function verifyTicketWithOpenRouter({ imageDataUrl }) {
   const json = await response.json();
   const content = json?.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error('OpenRouter returned empty content');
+    throw new Error('OpenRouter returned empty response content');
   }
 
   const normalized = normalizeModelOutput(safeJsonParse(content));
-  const imageHash = crypto.createHash('sha256').update(payload).digest('hex');
-  const ticketFingerprint = buildTicketFingerprint(normalized);
   const estimatedCo2SavedKg = estimateCo2SavedKg(normalized.transportType, normalized.oneWayDistanceKm);
+
+  const ticketFingerprint = buildTicketFingerprint(normalized, imageHash);
 
   return {
     ...normalized,
