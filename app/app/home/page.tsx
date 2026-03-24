@@ -67,6 +67,7 @@ export default function HomePage() {
   const [isSubmittingTimeline, setIsSubmittingTimeline] = useState(false);
   const [isTimelineSectionOpen, setIsTimelineSectionOpen] = useState(false);
   const [timelineStatus, setTimelineStatus] = useState<string>("");
+  const [latestOnChainTxHash, setLatestOnChainTxHash] = useState<string | null>(null);
   const [verifyingCategory, setVerifyingCategory] = useState<string | null>(null);
   const [ticketStatus, setTicketStatus] = useState<string>("");
   const [wispBalance, setWispBalance] = useState(0);
@@ -135,6 +136,11 @@ export default function HomePage() {
   ]);
 
   const effectiveWispBalance = useMemo(() => wispBalance + wispBalanceDelta, [wispBalance, wispBalanceDelta]);
+
+  const getHashscanTxUrl = (txHash: string) => {
+    const network = (process.env.NEXT_PUBLIC_HEDERA_NETWORK || "testnet").toLowerCase();
+    return `https://hashscan.io/${network}/transaction/${txHash}`;
+  };
 
   useEffect(() => {
     if (!isLoading && !token) {
@@ -310,6 +316,11 @@ export default function HomePage() {
         return;
       }
 
+      const txHash = String(payload?.onChain?.txHash || "");
+      if (txHash) {
+        setLatestOnChainTxHash(txHash);
+      }
+
       const xpEarned = Number(payload?.reward?.xpEarned || 0);
       const wispEarned = Number(payload?.reward?.wispEarned || 0);
       setXp((prev) => Math.min(prev + xpEarned, 50));
@@ -354,6 +365,11 @@ export default function HomePage() {
       if (!res.ok) {
         setTicketStatus(payload?.error || "Could not verify this action.");
         return;
+      }
+
+      const txHash = String(payload?.onChain?.txHash || "");
+      if (txHash) {
+        setLatestOnChainTxHash(txHash);
       }
 
       const xpEarned = Number(payload?.reward?.xpEarned || 0);
@@ -417,6 +433,11 @@ export default function HomePage() {
       if (!res.ok) {
         setBillStatus(payload?.error || "Could not verify electricity bill.");
         return;
+      }
+
+      const txHash = String(payload?.onChain?.txHash || "");
+      if (txHash) {
+        setLatestOnChainTxHash(txHash);
       }
 
       const xpEarned = Number(payload?.reward?.xpEarned || 0);
@@ -489,6 +510,11 @@ export default function HomePage() {
       if (!res.ok) {
         setScreenStatus(payload?.error || "Could not verify screen-time screenshot.");
         return;
+      }
+
+      const txHash = String(payload?.onChain?.txHash || "");
+      if (txHash) {
+        setLatestOnChainTxHash(txHash);
       }
 
       const xpEarned = Number(payload?.reward?.xpEarned || 0);
@@ -566,6 +592,11 @@ export default function HomePage() {
         return;
       }
 
+      const txHash = String(payload?.onChain?.txHash || "");
+      if (txHash) {
+        setLatestOnChainTxHash(txHash);
+      }
+
       const xpEarned = Number(payload?.reward?.xpEarned || 0);
       const wispEarned = Number(payload?.reward?.wispEarned || 0);
       const dishName = String(payload?.meal?.dishName || "Plant meal");
@@ -637,6 +668,11 @@ export default function HomePage() {
         return;
       }
 
+      const txHash = String(payload?.onChain?.txHash || "");
+      if (txHash) {
+        setLatestOnChainTxHash(txHash);
+      }
+
       const xpEarned = Number(payload?.reward?.xpEarned || 0);
       const wispEarned = Number(payload?.reward?.wispEarned || 0);
       const itemCount = Number(payload?.recycling?.recyclableItemCount || 0);
@@ -706,6 +742,11 @@ export default function HomePage() {
       if (!res.ok) {
         setTimelineStatus(payload?.error || "Could not verify timeline screenshot.");
         return;
+      }
+
+      const txHash = String(payload?.onChain?.txHash || "");
+      if (txHash) {
+        setLatestOnChainTxHash(txHash);
       }
 
       const xpEarned = Number(payload?.reward?.xpEarned || 0);
@@ -859,6 +900,20 @@ export default function HomePage() {
               {isSyncingHome ? "Syncing" : "Fully Private"}
             </span>
           </div>
+
+          {latestOnChainTxHash ? (
+            <div className="bg-white rounded-2xl p-4 mb-4 border border-emerald-200 shadow-[0_6px_18px_rgba(0,0,0,0.04)]">
+              <p className="text-[11px] font-semibold text-slate-600 mb-1">Latest on-chain verification is confirmed.</p>
+              <a
+                href={getHashscanTxUrl(latestOnChainTxHash)}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[12px] font-bold text-emerald-700 underline"
+              >
+                View on HashScan
+              </a>
+            </div>
+          ) : null}
 
           <div className="bg-white rounded-2xl p-4 mb-4 shadow-[0_6px_18px_rgba(0,0,0,0.04)] border border-slate-100">
             <div className="flex items-center justify-between gap-2 mb-3">

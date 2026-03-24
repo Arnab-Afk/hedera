@@ -61,8 +61,14 @@ export default function AdventuresPage() {
   const [claiming, setClaiming] = useState<string | null>(null);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [latestOnChainTxHash, setLatestOnChainTxHash] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("All");
   const [profileXp, setProfileXp] = useState(0);
+
+  const getHashscanTxUrl = (txHash: string) => {
+    const network = (process.env.NEXT_PUBLIC_HEDERA_NETWORK || "testnet").toLowerCase();
+    return `https://hashscan.io/${network}/transaction/${txHash}`;
+  };
 
   useEffect(() => {
     if (!isAuthLoading && !token) {
@@ -141,6 +147,11 @@ export default function AdventuresPage() {
           return;
         }
 
+        const txHash = String(payload?.onChain?.txHash || "");
+        if (txHash) {
+          setLatestOnChainTxHash(txHash);
+        }
+
         setStatusMessage("Action verified. Refreshing quest progress...");
         await loadAdventuresData();
       } catch {
@@ -175,6 +186,11 @@ export default function AdventuresPage() {
       if (!res.ok) {
         setStatusMessage(payload?.error || "Could not claim quest reward.");
         return;
+      }
+
+      const txHash = String(payload?.claim_chain_tx_hash || payload?.onChain?.txHash || "");
+      if (txHash) {
+        setLatestOnChainTxHash(txHash);
       }
 
       setStatusMessage(`Claimed +${Number(payload?.xp_reward || 0)} XP and +${Number(payload?.wisp_reward || 0)} WISP.`);
@@ -312,6 +328,18 @@ export default function AdventuresPage() {
           {statusMessage ? (
             <div className="bg-white border border-slate-200 rounded-xl p-2.5 text-[11px] font-semibold text-slate-600">
               {statusMessage}
+              {latestOnChainTxHash ? (
+                <div className="mt-1">
+                  <a
+                    href={getHashscanTxUrl(latestOnChainTxHash)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-emerald-700 underline"
+                  >
+                    View on HashScan
+                  </a>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

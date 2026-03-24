@@ -41,6 +41,7 @@ interface ActionItem {
   submitted_at: string;
   xp_earned?: number;
   wisp_earned?: number;
+  chain_tx_hash?: string | null;
 }
 
 interface QuestItem {
@@ -58,6 +59,7 @@ const connectedSourcesBase = [
 
 export default function ProfilePage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const hederaNetwork = (process.env.NEXT_PUBLIC_HEDERA_NETWORK || "testnet").toLowerCase();
   const router = useRouter();
   const { token, user, isLoading: isAuthLoading } = useAuth();
 
@@ -416,6 +418,17 @@ export default function ProfilePage() {
                     <div>
                       <p className="text-xs font-bold text-[#3b415a]">{formatCategory(a.category)}</p>
                       <p className="text-[10px] text-slate-400 font-medium">{formatDate(a.submitted_at)}</p>
+                      {a.chain_tx_hash ? (
+                        <a
+                          href={`https://hashscan.io/${hederaNetwork}/transaction/${a.chain_tx_hash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 underline mt-0.5"
+                        >
+                          View on HashScan
+                          <ArrowUpRight className="w-3 h-3" />
+                        </a>
+                      ) : null}
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-bold text-emerald-700">+{Number(a.wisp_earned || 0).toFixed(3)} WISP</p>
