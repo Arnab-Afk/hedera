@@ -112,11 +112,22 @@ async function createAndInitializeUser({ walletAddress, email, socialId, authTyp
   await query('INSERT INTO streaks (user_id) VALUES ($1)', [user.id]);
 
   // 3. Auto-Mint NFT (Stage 1)
-  const spiritNftId = process.env.SPIRIT_NFT_ID;
+  const spiritNftId = process.env.SPIRIT_NFT_ID || process.env.WISP_NFT_TOKEN_ID;
   if (spiritNftId) {
     try {
       const client = getClient();
-      const supplyKey = PrivateKey.fromStringDer(process.env.HEDERA_PRIVATE_KEY);
+      const keyText = process.env.HEDERA_PRIVATE_KEY || process.env.HEDERA_OPERATOR_KEY;
+      if (!keyText) {
+        throw new Error('Missing HEDERA_PRIVATE_KEY/HEDERA_OPERATOR_KEY for NFT mint');
+      }
+
+      let supplyKey;
+      try {
+        supplyKey = PrivateKey.fromStringDer(keyText);
+      } catch {
+        supplyKey = PrivateKey.fromString(keyText);
+      }
+
       const mintTx = await new TokenMintTransaction()
         .setTokenId(TokenId.fromString(spiritNftId))
         .addMetadata(Buffer.from('stage:1'))
