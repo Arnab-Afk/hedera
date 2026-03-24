@@ -8,6 +8,7 @@ const { verifyScreenTimeScreenshotWithAI } = require('../lib/screenTimeVerifier'
 const { verifyPlantMealWithAI } = require('../lib/plantMealVerifier');
 const { verifyRecyclingPhotoWithAI } = require('../lib/recyclingPhotoVerifier');
 const { verifyTimelineScreenshotWithAI, toLocalDateKey } = require('../lib/timelineVerifier');
+const { submitVerifiedActionOnChain } = require('../lib/wispCoreClient');
 
 /**
  * POST /api/actions
@@ -79,12 +80,14 @@ async function submitAction(req, res, next) {
     // Update streak and quest progress
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
+    const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
 
     res.status(201).json({ 
       action: result.rows[0], 
       wispEarned, 
       xpEarned,
-      newLevel: newLevel > oldLevel ? newLevel : null
+      newLevel: newLevel > oldLevel ? newLevel : null,
+      onChain,
     });
   } catch (err) {
     next(err);
@@ -170,6 +173,7 @@ async function submitTicketPhotoAction(req, res, next) {
 
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
+    const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -185,6 +189,7 @@ async function submitTicketPhotoAction(req, res, next) {
         reasoning: verification.reasoning,
       },
       levelUp: newLevel > oldLevel ? newLevel : null,
+      onChain,
     });
   } catch (err) {
     next(err);
@@ -260,6 +265,7 @@ async function submitManualAction(req, res, next) {
 
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
+    const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -268,6 +274,7 @@ async function submitManualAction(req, res, next) {
         xpEarned,
       },
       levelUp: newLevel > oldLevel ? newLevel : null,
+      onChain,
     });
   } catch (err) {
     next(err);
@@ -358,6 +365,7 @@ async function submitElectricityBillAction(req, res, next) {
 
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
+    const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -374,6 +382,7 @@ async function submitElectricityBillAction(req, res, next) {
         reasoning: bill.reasoning,
       },
       levelUp: newLevel > oldLevel ? newLevel : null,
+      onChain,
     });
   } catch (err) {
     next(err);
@@ -453,6 +462,7 @@ async function submitScreenTimeAction(req, res, next) {
 
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
+    const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -469,6 +479,7 @@ async function submitScreenTimeAction(req, res, next) {
         reasoning: screen.reasoning,
       },
       levelUp: newLevel > oldLevel ? newLevel : null,
+      onChain,
     });
   } catch (err) {
     next(err);
@@ -547,6 +558,7 @@ async function submitPlantMealAction(req, res, next) {
 
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
+    const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -561,6 +573,7 @@ async function submitPlantMealAction(req, res, next) {
         reasoning: meal.reasoning,
       },
       levelUp: newLevel > oldLevel ? newLevel : null,
+      onChain,
     });
   } catch (err) {
     next(err);
@@ -639,6 +652,7 @@ async function submitRecyclingPhotoAction(req, res, next) {
 
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
+    const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -653,6 +667,7 @@ async function submitRecyclingPhotoAction(req, res, next) {
         reasoning: recycle.reasoning,
       },
       levelUp: newLevel > oldLevel ? newLevel : null,
+      onChain,
     });
   } catch (err) {
     next(err);
@@ -748,6 +763,7 @@ async function submitTimelineScreenshotAction(req, res, next) {
 
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
+    const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -768,6 +784,7 @@ async function submitTimelineScreenshotAction(req, res, next) {
         reasoning: timeline.reasoning,
       },
       levelUp: newLevel > oldLevel ? newLevel : null,
+      onChain,
     });
   } catch (err) {
     next(err);
