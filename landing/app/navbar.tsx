@@ -6,6 +6,7 @@ const links = [
   { label: 'Features',     href: '#features' },
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Tokenomics',   href: '#tokenomics' },
+  { label: 'Whitepaper',   href: '/whitepaper' },
 ];
 
 export default function Navbar() {
@@ -36,7 +37,7 @@ export default function Navbar() {
       <nav
         style={{
           width:         scrolled ? 'auto' : '100%',
-          maxWidth:      scrolled ? '680px' : '100%',
+          maxWidth:      scrolled ? '860px' : '100%',
           transition:    'all 0.5s cubic-bezier(0.4,0,0.2,1)',
           background:    scrolled ? 'rgba(255,248,241,0.92)' : 'rgba(250,242,233,0.75)',
           backdropFilter:'blur(24px)',
@@ -76,9 +77,8 @@ export default function Navbar() {
         <div
           className="hidden md:flex items-center"
           style={{
-            gap:           scrolled ? '1.5rem' : '2rem',
+            gap:           scrolled ? '1.2rem' : '1.8rem',
             transition:    'gap 0.5s ease',
-            overflow:      'hidden',
           }}
         >
           {links.map((l) => (

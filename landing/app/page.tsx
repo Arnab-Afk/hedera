@@ -534,7 +534,7 @@ export default function Home() {
             {[
               { label: 'GitHub',     href: 'https://github.com/Arnab-Afk/hedera', external: true },
               { label: 'Tokenomics', href: '#tokenomics',                          external: false },
-              { label: 'Whitepaper', href: '#',                                    external: false },
+              { label: 'Whitepaper', href: '/whitepaper',                               external: false },
             ].map((l) => (
               <a key={l.label} href={l.href}
                 target={l.external ? '_blank' : undefined}
