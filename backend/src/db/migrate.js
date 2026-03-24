@@ -47,6 +47,9 @@ CREATE TABLE IF NOT EXISTS actions (
   submitted_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE actions
+  ADD COLUMN IF NOT EXISTS chain_tx_hash TEXT;
+
 -- ── Quest Definitions ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS quest_definitions (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -69,10 +72,14 @@ CREATE TABLE IF NOT EXISTS user_quests (
   current_count   INT NOT NULL DEFAULT 0,
   completed       BOOLEAN NOT NULL DEFAULT FALSE,
   claimed         BOOLEAN NOT NULL DEFAULT FALSE,
+  claim_chain_tx_hash TEXT,
   expires_at      TIMESTAMPTZ,
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(user_id, quest_id)
 );
+
+ALTER TABLE user_quests
+  ADD COLUMN IF NOT EXISTS claim_chain_tx_hash TEXT;
 
 -- ── Inventory ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS inventory (
@@ -116,7 +123,9 @@ CREATE TABLE IF NOT EXISTS redemptions (
 CREATE INDEX IF NOT EXISTS idx_actions_user_id       ON actions(user_id);
 CREATE INDEX IF NOT EXISTS idx_actions_category      ON actions(category);
 CREATE INDEX IF NOT EXISTS idx_actions_submitted_at  ON actions(submitted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_actions_chain_tx_hash ON actions(chain_tx_hash);
 CREATE INDEX IF NOT EXISTS idx_user_quests_user_id   ON user_quests(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_quests_claim_tx_hash ON user_quests(claim_chain_tx_hash);
 CREATE INDEX IF NOT EXISTS idx_inventory_user_id     ON inventory(user_id);
 CREATE INDEX IF NOT EXISTS idx_redemptions_user_id   ON redemptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_merchants_city        ON merchants(city);

@@ -81,6 +81,7 @@ async function submitAction(req, res, next) {
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
     const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
+    await persistActionChainTx(result.rows[0]?.id, onChain);
 
     res.status(201).json({ 
       action: result.rows[0], 
@@ -174,6 +175,7 @@ async function submitTicketPhotoAction(req, res, next) {
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
     const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
+    await persistActionChainTx(actionInsert.rows[0]?.id, onChain);
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -266,6 +268,7 @@ async function submitManualAction(req, res, next) {
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
     const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
+    await persistActionChainTx(actionInsert.rows[0]?.id, onChain);
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -366,6 +369,7 @@ async function submitElectricityBillAction(req, res, next) {
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
     const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
+    await persistActionChainTx(actionInsert.rows[0]?.id, onChain);
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -463,6 +467,7 @@ async function submitScreenTimeAction(req, res, next) {
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
     const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
+    await persistActionChainTx(actionInsert.rows[0]?.id, onChain);
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -559,6 +564,7 @@ async function submitPlantMealAction(req, res, next) {
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
     const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
+    await persistActionChainTx(actionInsert.rows[0]?.id, onChain);
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -653,6 +659,7 @@ async function submitRecyclingPhotoAction(req, res, next) {
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
     const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
+    await persistActionChainTx(actionInsert.rows[0]?.id, onChain);
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -764,6 +771,7 @@ async function submitTimelineScreenshotAction(req, res, next) {
     await updateStreak(userId, daySequence, xpEarned);
     await updateQuestProgress(query, userId, category);
     const onChain = await submitVerifiedActionOnChain({ proofHash, category, daySequence });
+    await persistActionChainTx(actionInsert.rows[0]?.id, onChain);
 
     return res.status(201).json({
       action: actionInsert.rows[0],
@@ -870,6 +878,24 @@ async function getDaySequenceForUser(userId) {
     return Math.max(1, current_streak || 1);
   }
   return (current_streak || 0) + 1;
+}
+
+async function persistActionChainTx(actionId, onChain) {
+  const txHash = onChain && typeof onChain.txHash === 'string' ? onChain.txHash : null;
+  if (!actionId || !txHash) {
+    return;
+  }
+
+  try {
+    await query(
+      `UPDATE actions
+       SET chain_tx_hash = $1
+       WHERE id = $2`,
+      [txHash, actionId]
+    );
+  } catch (err) {
+    console.error('Failed to persist action chain tx hash:', err.message);
+  }
 }
 
 function round8(value) {

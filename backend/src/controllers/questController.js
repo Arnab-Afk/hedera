@@ -1,4 +1,5 @@
 const { query } = require('../db/pool');
+const { submitVerifiedActionOnChain } = require('../lib/wispCoreClient');
 
 /**
  * GET /api/quests
@@ -79,10 +80,21 @@ async function claimQuest(req, res, next) {
       throw err;
     }
 
+    const questProofHash = `quest-claim:${userId}:${questInstanceId}`;
+    const onChain = await submitVerifiedActionOnChain({
+      proofHash: questProofHash,
+      category: 'quest_claim',
+      daySequence: Math.max(1, Number(quest.current_count || 1)),
+    });
+
+    await persistQuestClaimTx(questInstanceId, onChain);
+
     res.json({ 
       message: 'Quest rewards claimed successfully', 
       xp_reward: quest.xp_reward, 
-      wisp_reward: quest.wisp_reward 
+      wisp_reward: quest.wisp_reward,
+      onChain,
+      claim_chain_tx_hash: onChain?.txHash || null,
     });
   } catch (err) {
     next(err);
@@ -119,6 +131,25 @@ async function _ensureDailyQuests(userId) {
     );
 
     await Promise.all(insertions);
+  }
+}
+
+async function persistQuestClaimTx(questInstanceId, onChain) {
+  const txHash = onChain && typeof onChain.txHash === 'string' ? onChain.txHash : null;
+  if (!questInstanceId || !txHash) {
+    return;
+  }
+
+  try {
+    await query(
+      `UPDATE user_quests
+       SET claim_chain_tx_hash = $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [txHash, questInstanceId]
+    );
+  } catch (err) {
+    console.error('Failed to persist quest claim tx hash:', err.message);
   }
 }
 
