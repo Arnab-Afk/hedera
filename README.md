@@ -7,7 +7,7 @@ Raw personal data is not persisted as user identity data in the reward pipeline.
 
 ## What Is Implemented
 
-### User app (Next.js)
+### User app (Next.js-ShadCN)
 - Onboarding flow (splash, slides, login, spirit naming, mood check).
 - Authenticated app pages:
   - Home
